@@ -122,6 +122,7 @@
         
         <div id="s5Section" class="data-section" data-tab="s5" style="display: none;">
             <h2>5. ขั้นตอนลงทะเบียนลูกค้า (S5)</h2>
+            <p style="color: #666; font-size: 0.9em;">*ขั้นตอนชุดมาตรฐาน (แสดงสำหรับทุกแผนประกัน)</p>
             <div id="s5List"></div>
             <button onclick="updateS5Names()" class="save-button">💾 บันทึกการแก้ไขชื่อขั้นตอนลงทะเบียน</button>
         </div>
@@ -198,11 +199,11 @@
         
         const selectedProductTag = document.getElementById('adminProductType').value;
         
-        // 1. STRICT_FILTER: สำหรับส่วนที่ต้องเปลี่ยนไปตาม Product ที่เลือกจริงๆ
+        // 1. STRICT_FILTER: สำหรับส่วนที่ต้องเปลี่ยนไปตาม Product จริงๆ (S1, S2, S3, S4 Main)
         const STRICT_FILTER = [selectedProductTag]; 
 
-        // 2. HEALTH_STANDARD_FILTER: สำหรับส่วนซักประวัติ (Follow-up) 
-        // บังคับให้เป็น 'health' เสมอ เพื่อให้ดึง 5 ข้อมาตรฐานออกมา ไม่ว่าผู้ใช้จะเลือก Product อะไร
+        // 2. HEALTH_STANDARD_FILTER: สำหรับส่วนที่เป็นมาตรฐานกลาง (S4 Follow-up, S5 Registration)
+        // บังคับดึง Tag 'health' เสมอ เพื่อให้โชว์ครบทุกข้อ ไม่ว่าจะเลือก Product ไหน
         const HEALTH_STANDARD_FILTER = ['health'];
 
         try {
@@ -210,33 +211,34 @@
             const { data: cData, error: cError } = await supabase.from('difficulty_config').select('*');
             if (cError) throw cError; configData = cData;
 
-            // 2.1 S1 (ตาม Product)
+            // 2.1 S1 (Strict)
             const { data: s1Data, error: s1Error } = await supabase.from('customer_replies_s1').select('*').overlaps('product_type', STRICT_FILTER).order('turn_index', { ascending: true });
             if (s1Error) throw s1Error; s1FilesData = s1Data;
             
-            // 2.2 S2 (ตาม Product)
+            // 2.2 S2 (Strict)
             const { data: s2Data, error: s2Error } = await supabase.from('questions_s2').select('*').overlaps('product_type', STRICT_FILTER).order('q_index', { ascending: true });
             if (s2Error) throw s2Error; s2QuestionsData = s2Data;
 
-            // 2.3 S3 (ตาม Product)
+            // 2.3 S3 (Strict)
             const { data: s3Data, error: s3Error } = await supabase.from('objections_s3').select('*').overlaps('product_type', STRICT_FILTER).order('ob_index', { ascending: true });
             if (s3Error) throw s3Error; s3ObjectionsData = s3Data;
             
-            // 2.4 S4 - Main Questions (ตาม Product -> Saving เห็น 1, Health เห็น 5)
+            // 2.4 S4 - Main Questions (Strict -> Saving เห็น 1 ข้อ)
             const { data: qData, error: qError } = await supabase.from('health_questions_s4').select('*').overlaps('product_type', STRICT_FILTER).order('q_index', { ascending: true });
             if (qError) throw qError; healthQuestionsData = qData;
             yesTriggerQ = qData.find(q => q.is_yes_trigger) || null;
             
-            // ** 2.5 S4 - Follow Up Names (FORCE 'health' -> เห็นครบ 5 ข้อเสมอ) **
+            // 2.5 S4 - Follow Up Names (Standard -> เห็น 5 ข้อ)
             const { data: fuData, error: fuError } = await supabase.from('s4_follow_up_names').select('*').overlaps('product_type', HEALTH_STANDARD_FILTER).order('step_index', { ascending: true });
             if (fuError) throw fuError; followUpNamesData = fuData;
             
-            // ** 2.6 S4 - Follow Up Replies (FORCE 'health' -> เห็นครบ 5 ไฟล์เสมอ) **
+            // 2.6 S4 - Follow Up Replies (Standard -> เห็น 5 ไฟล์)
             const { data: furData, error: furError } = await supabase.from('s4_follow_up_replies').select('*').overlaps('product_type', HEALTH_STANDARD_FILTER).order('step_index', { ascending: true });
             if (furError) throw furError; followUpRepliesData = furData;
 
-            // 2.7 S5 (ตาม Product)
-            const { data: s5Data, error: s5Error } = await supabase.from('scripts_s5').select('*').overlaps('product_type', STRICT_FILTER).order('step_index', { ascending: true });
+            // ** 2.7 S5 - Registration (Standard -> เห็นครบทุกขั้นตอน)**
+            // แก้ไข: ใช้ HEALTH_STANDARD_FILTER แทน STRICT_FILTER
+            const { data: s5Data, error: s5Error } = await supabase.from('scripts_s5').select('*').overlaps('product_type', HEALTH_STANDARD_FILTER).order('step_index', { ascending: true });
             if (s5Error) throw s5Error; s5StepsData = s5Data;
 
             renderUI();
@@ -307,14 +309,14 @@
             q4List.innerHTML += `<div class="item-row"><strong>Q${q.q_index}${isTrigger}</strong><textarea id="q4_text_${q.id}" rows="3">${q.q_text}</textarea></div>`;
         });
         
-        // Render Follow-up Names (5 ข้อ)
+        // Render Follow-up Names
         const fuNamesList = document.getElementById('fuNamesList'); fuNamesList.innerHTML = '';
         if(followUpNamesData.length === 0) fuNamesList.innerHTML = '<p>ไม่พบข้อมูลซักประวัติ (ตรวจสอบ Tag: health)</p>';
         followUpNamesData.forEach(q => {
             fuNamesList.innerHTML += `<div class="item-row"><strong>Step ${q.step_index}</strong><input type="text" id="fu_name_${q.id}" value="${q.step_name}"></div>`;
         });
         
-        // Render Follow-up Replies (5 ไฟล์เสียงลูกค้า)
+        // Render Follow-up Replies
         const fuRepliesList = document.getElementById('fuRepliesList'); fuRepliesList.innerHTML = '';
         if(followUpRepliesData.length === 0) fuRepliesList.innerHTML = '<p>ไม่พบข้อมูลไฟล์เสียงซักประวัติ (ตรวจสอบ Tag: health)</p>';
         followUpRepliesData.forEach(r => {
@@ -330,7 +332,7 @@
 
     const renderS5 = () => {
         const list = document.getElementById('s5List'); list.innerHTML = '';
-        if(s5StepsData.length === 0) list.innerHTML = '<p>ไม่มีข้อมูลสำหรับ Product นี้</p>';
+        if(s5StepsData.length === 0) list.innerHTML = '<p>ไม่พบข้อมูลขั้นตอนลงทะเบียน (ตรวจสอบ Tag: health)</p>';
         s5StepsData.forEach(s => {
             const uploadId = `s5_upload_${s.id}`;
             list.innerHTML += `<div class="item-row"><strong>Step ${s.step_index}</strong><label>ชื่อขั้นตอน/สคริปต์:</label><textarea id="s5_name_${s.id}" rows="2">${s.step_name}</textarea><div class="audio-control"><div class="audio-url-display">${s.customer_audio_url}</div><audio src="${s.customer_audio_url}" controls></audio></div>${createAudioUploaderHTML(uploadId, 'scripts_s5', 'customer_audio_url', 'id', s.id)}</div>`;
