@@ -10,23 +10,13 @@
         .container { max-width: 1200px; margin: 20px auto; padding: 30px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
         h1 { text-align: center; color: #007bff; margin-bottom: 20px; }
         
-        /* Product Selector Styles */
         .product-selector { text-align: center; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
         .product-selector select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; }
         
-        /* New Refresh Button Style */
         .refresh-btn {
-            background-color: #28a745; /* สีเขียว */
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            transition: background-color 0.2s, transform 0.1s;
-            display: inline-flex;
-            align-items: center;
+            background-color: #28a745; color: white; border: none; padding: 8px 15px;
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
+            transition: background-color 0.2s, transform 0.1s; display: inline-flex; align-items: center;
         }
         .refresh-btn:hover { background-color: #218838; }
         .refresh-btn:active { transform: scale(0.95); }
@@ -88,7 +78,6 @@
 
         <div id="s1Section" class="data-section" data-tab="s1" style="display: none;">
             <h2>1. บทโต้ตอบต้นสาย (S1 - Customer Replies)</h2>
-            <p>จัดการไฟล์เสียงลูกค้าในแต่ละเทิร์น: (รวมถึงไฟล์สุดท้ายที่เป็น FINALE)</p>
             <div id="s1List"></div>
         </div>
         
@@ -123,11 +112,12 @@
             </div>
             
             <h3>4.3 คำถามซักประวัติ (S4 Follow-up Names)</h3>
+            <p style="color: #666; font-size: 0.9em;">*คำถามส่วนนี้ใช้ร่วมกันทุกแบบประกัน (แสดงเสมอ)</p>
             <div id="fuNamesList"></div>
             <button onclick="updateFollowUpNames()" class="save-button">💾 บันทึกการแก้ไขชื่อคำถามซักประวัติ</button>
             
             <h3>4.4 ไฟล์เสียงตอบซักประวัติ (S4 Follow-up Replies)</h3>
-            <p>จัดการ URL เสียงลูกค้าตอบคำถามซักประวัติแต่ละขั้นตอน:</p>
+            <p style="color: #666; font-size: 0.9em;">*ไฟล์เสียงส่วนนี้ใช้ร่วมกันทุกแบบประกัน (แสดงเสมอ)</p>
             <div id="fuRepliesList"></div>
         </div>
         
@@ -143,7 +133,7 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     import { v4 as uuidv4 } from 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/esm-browser/index.js';
 
-    // ** 1. Supabase Configuration **
+    // ** Supabase Configuration **
     const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -195,7 +185,6 @@
             tabMenu.appendChild(button);
         });
         
-        // คงสถานะ Tab เดิมไว้ถ้าเป็นไปได้ หรือ Default ตาม Product
         const currentActive = document.querySelector('.tab-button.active');
         const defaultTab = document.getElementById('adminProductType').value === 'health' ? 's4' : 's1';
         if (!currentActive) {
@@ -204,46 +193,51 @@
     };
 
     // --- 2. ฟังก์ชันดึงข้อมูลทั้งหมด (READ) ---
-    // ทำให้เป็น Global Window function เพื่อให้ปุ่ม HTML เรียกใช้ได้
     window.fetchAllData = async () => {
         statusElement.className = 'loading-text';
         statusElement.textContent = '⏳ กำลังโหลดข้อมูล...';
         
         const selectedProductTag = document.getElementById('adminProductType').value;
-        const FILTER_TAGS = [selectedProductTag]; 
+        
+        // 1. Filter หลัก: ใช้สำหรับ S1, S2, S3, S4(ข้อหลัก), S5 (กรองตาม Product เป๊ะๆ)
+        const STRICT_FILTER = [selectedProductTag]; 
+
+        // 2. Filter พิเศษ: ใช้สำหรับ "ซักประวัติ (Follow-up)" 
+        // Logic: ให้ดึง Tag 'health' มาด้วยเสมอ เพราะคำถามซักประวัติ 5 ข้อใช้ร่วมกัน
+        const SHARED_FILTER = ['health', selectedProductTag];
 
         try {
             // 2.0 Config
             const { data: cData, error: cError } = await supabase.from('difficulty_config').select('*');
             if (cError) throw cError; configData = cData;
 
-            // 2.1 S1 (Apply Filter)
-            const { data: s1Data, error: s1Error } = await supabase.from('customer_replies_s1').select('*').overlaps('product_type', FILTER_TAGS).order('turn_index', { ascending: true });
+            // 2.1 S1 (Strict)
+            const { data: s1Data, error: s1Error } = await supabase.from('customer_replies_s1').select('*').overlaps('product_type', STRICT_FILTER).order('turn_index', { ascending: true });
             if (s1Error) throw s1Error; s1FilesData = s1Data;
             
-            // 2.2 S2 (Apply Filter)
-            const { data: s2Data, error: s2Error } = await supabase.from('questions_s2').select('*').overlaps('product_type', FILTER_TAGS).order('q_index', { ascending: true });
+            // 2.2 S2 (Strict)
+            const { data: s2Data, error: s2Error } = await supabase.from('questions_s2').select('*').overlaps('product_type', STRICT_FILTER).order('q_index', { ascending: true });
             if (s2Error) throw s2Error; s2QuestionsData = s2Data;
 
-            // 2.3 S3 (Apply Filter)
-            const { data: s3Data, error: s3Error } = await supabase.from('objections_s3').select('*').overlaps('product_type', FILTER_TAGS).order('ob_index', { ascending: true });
+            // 2.3 S3 (Strict)
+            const { data: s3Data, error: s3Error } = await supabase.from('objections_s3').select('*').overlaps('product_type', STRICT_FILTER).order('ob_index', { ascending: true });
             if (s3Error) throw s3Error; s3ObjectionsData = s3Data;
             
-            // 2.4 S4 - Health Questions (Apply Filter)
-            const { data: qData, error: qError } = await supabase.from('health_questions_s4').select('*').overlaps('product_type', FILTER_TAGS).order('q_index', { ascending: true });
+            // 2.4 S4 - Health Questions (Strict - เพื่อให้ Saving เห็นแค่ 1 ข้อ)
+            const { data: qData, error: qError } = await supabase.from('health_questions_s4').select('*').overlaps('product_type', STRICT_FILTER).order('q_index', { ascending: true });
             if (qError) throw qError; healthQuestionsData = qData;
             yesTriggerQ = qData.find(q => q.is_yes_trigger) || null;
             
-            // 2.5 S4 - Follow Up Names (Apply Filter)
-            const { data: fuData, error: fuError } = await supabase.from('s4_follow_up_names').select('*').overlaps('product_type', FILTER_TAGS).order('step_index', { ascending: true });
+            // ** 2.5 S4 - Follow Up Names (Shared - ใช้ SHARED_FILTER เพื่อให้เห็น 5 ข้อเสมอ) **
+            const { data: fuData, error: fuError } = await supabase.from('s4_follow_up_names').select('*').overlaps('product_type', SHARED_FILTER).order('step_index', { ascending: true });
             if (fuError) throw fuError; followUpNamesData = fuData;
             
-            // 2.6 S4 - Follow Up Replies (Apply Filter)
-            const { data: furData, error: furError } = await supabase.from('s4_follow_up_replies').select('*').overlaps('product_type', FILTER_TAGS).order('step_index', { ascending: true });
+            // ** 2.6 S4 - Follow Up Replies (Shared - ใช้ SHARED_FILTER เพื่อให้เห็น 5 ข้อเสมอ) **
+            const { data: furData, error: furError } = await supabase.from('s4_follow_up_replies').select('*').overlaps('product_type', SHARED_FILTER).order('step_index', { ascending: true });
             if (furError) throw furError; followUpRepliesData = furData;
 
-            // 2.7 S5 (Apply Filter)
-            const { data: s5Data, error: s5Error } = await supabase.from('scripts_s5').select('*').overlaps('product_type', FILTER_TAGS).order('step_index', { ascending: true });
+            // 2.7 S5 (Strict)
+            const { data: s5Data, error: s5Error } = await supabase.from('scripts_s5').select('*').overlaps('product_type', STRICT_FILTER).order('step_index', { ascending: true });
             if (s5Error) throw s5Error; s5StepsData = s5Data;
 
             renderUI();
@@ -315,11 +309,13 @@
         });
         
         const fuNamesList = document.getElementById('fuNamesList'); fuNamesList.innerHTML = '';
+        if(followUpNamesData.length === 0) fuNamesList.innerHTML = '<p>ไม่พบข้อมูลซักประวัติ</p>';
         followUpNamesData.forEach(q => {
             fuNamesList.innerHTML += `<div class="item-row"><strong>Step ${q.step_index}</strong><input type="text" id="fu_name_${q.id}" value="${q.step_name}"></div>`;
         });
         
         const fuRepliesList = document.getElementById('fuRepliesList'); fuRepliesList.innerHTML = '';
+        if(followUpRepliesData.length === 0) fuRepliesList.innerHTML = '<p>ไม่พบข้อมูลไฟล์เสียงซักประวัติ</p>';
         followUpRepliesData.forEach(r => {
             const uploadId = `fu_reply_upload_${r.id}`;
             fuRepliesList.innerHTML += `<div class="item-row"><strong>F${r.step_index}: (${r.disease_name || 'โรคสำคัญ'})</strong><div class="audio-control"><div class="audio-url-display">${r.customer_audio_url}</div><audio src="${r.customer_audio_url}" controls></audio></div>${createAudioUploaderHTML(uploadId, 's4_follow_up_replies', 'customer_audio_url', 'id', r.id)}</div>`;
@@ -412,7 +408,6 @@
 
         const fileExtension = file.name.split('.').pop();
         const sectionPrefix = table.split('_')[1] || 'generic';
-        // Unique Name เพื่อไม่ให้ Cache ชน
         const path = `customer_audio/${sectionPrefix}/${sectionPrefix}_${index_val}_${uuidv4()}.${fileExtension}`; 
 
         try {
