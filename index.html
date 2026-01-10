@@ -132,43 +132,72 @@
             });
         }
 
-        // 2. ฟังก์ชันหัวใจสำคัญ: สแกนหาไฟล์ใน Storage (Bucket: responses) โดยตรง
-        window.scanStorageAndOpen = async (userId, name) => {
-            activeUserId = userId;
-            document.getElementById('modalTraineeName').textContent = name;
-            document.getElementById('scoringModal').style.display = 'flex';
-            
-            const playlist = document.getElementById('audioPlaylist');
-            playlist.innerHTML = '<div class="text-center p-3">🔍 กำลังดึงไฟล์จาก Storage...</div>';
+// --- ฟังก์ชันผ่าตัดใหม่: สแกน Storage โดยตรง (อิงตามโครงสร้างที่คุณโชว์ในภาพ) ---
+window.scanStorageAndOpen = async (userId, name) => {
+    activeUserId = userId;
+    document.getElementById('modalTraineeName').textContent = name;
+    document.getElementById('scoringModal').style.display = 'flex';
+    
+    const playlist = document.getElementById('audioPlaylist');
+    playlist.innerHTML = `<div class="text-center p-3">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">กำลังตรวจสอบโฟลเดอร์: <b>${userId}</b></p>
+    </div>`;
 
-            // --- คำสั่งลิสต์ไฟล์จาก Storage (อาศัย Policy SELECT ที่คุณเพิ่งตั้งค่า) ---
-            const { data: files, error } = await supabase.storage.from('responses').list(userId, {
-                sortBy: { column: 'name', order: 'asc' }
-            });
+    // 1. สั่ง List รายชื่อไฟล์จาก Bucket 'responses' ภายใน Folder 'userId'
+    const { data: files, error } = await supabase.storage.from('responses').list(userId, {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'name', order: 'asc' }
+    });
 
-            if (error || !files || files.length === 0) {
-                playlist.innerHTML = '<div class="alert alert-warning text-center">ไม่พบไฟล์เสียงในระบบ<br><small>Path: ' + userId + '</small></div>';
-                return;
-            }
+    // กรณี Error (มักเกิดจาก Policy หรือสิทธิ์การเข้าถึง)
+    if (error) {
+        playlist.innerHTML = `
+            <div class="alert alert-danger">
+                <h6 class="fw-bold">เชื่อมต่อ Storage ไม่สำเร็จ</h6>
+                <p class="small mb-0">Error: ${error.message}</p>
+                <hr><small>ตรวจสอบว่าตั้งค่า Policy 'SELECT' ใน Supabase หรือยัง?</small>
+            </div>`;
+        return;
+    }
 
-            playlist.innerHTML = '';
-            files.forEach(file => {
-                if (file.name === '.emptyFolderPlaceholder') return;
+    // กรณีหาโฟลเดอร์ไม่เจอ หรือโฟลเดอร์ว่างเปล่า
+    if (!files || files.length === 0 || (files.length === 1 && files[0].name === '.emptyFolderPlaceholder')) {
+        playlist.innerHTML = `
+            <div class="alert alert-warning text-center">
+                <i class="bi bi-folder-x" style="font-size: 2rem;"></i>
+                <p class="mt-2 mb-0">ไม่พบไฟล์เสียงในโฟลเดอร์: <b>${userId}</b></p>
+                <small class="text-muted">โปรดเช็คว่าชื่อ Folder ใน Storage ตรงกับ ID ในตารางหรือไม่</small>
+            </div>`;
+        return;
+    }
 
-                // สร้างลิงก์ไฟล์ตรงๆ (Direct URL)
-                const fileUrl = `${supabaseUrl}/storage/v1/object/public/responses/${userId}/${file.name}`;
+    // 2. ถ้าเจอไฟล์ ให้สร้างตัวเล่นเสียงเรียงตามชื่อ S1, S1.5, S2...
+    playlist.innerHTML = '';
+    files.forEach(file => {
+        if (file.name === '.emptyFolderPlaceholder') return;
 
-                playlist.innerHTML += `
-                    <div class="audio-step-card shadow-sm border">
-                        <span class="file-name"><i class="bi bi-file-play"></i> ชื่อไฟล์: ${file.name}</span>
-                        <audio controls class="w-100 mt-2" style="height: 35px;">
-                            <source src="${fileUrl}" type="audio/webm">
-                            <source src="${fileUrl}" type="audio/mpeg">
-                        </audio>
-                    </div>`;
-            });
-        };
+        // สร้าง Public URL จาก Path เต็ม (responses/userId/fileName)
+        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${userId}/${file.name}`);
 
+        playlist.innerHTML += `
+            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-primary bg-white rounded">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-dark small"><i class="bi bi-mic"></i> ขั้นตอน: ${file.name}</span>
+                    <span class="badge bg-light text-muted" style="font-size: 10px;">
+                        ${(file.metadata.size / 1024).toFixed(1)} KB
+                    </span>
+                </div>
+                <audio controls src="${publicUrl}" class="w-100" style="height: 35px;"></audio>
+                <div class="text-end mt-1">
+                    <a href="${publicUrl}" target="_blank" class="text-decoration-none" style="font-size: 11px;">
+                        <i class="bi bi-box-arrow-up-right"></i> เปิดไฟล์ต้นฉบับ
+                    </a>
+                </div>
+            </div>`;
+    });
+};
         // บันทึกคะแนน
         document.getElementById('saveScoreBtn').onclick = async () => {
             const { error } = await supabase.from('submissions')
