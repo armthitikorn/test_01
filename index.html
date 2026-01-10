@@ -288,44 +288,44 @@
             });
         }
 
-        // 3. เปิด Modal ประเมิน (ใช้ข้อมูลในตารางโดยตรง)
-        window.openEval = (id) => {
-            const row = masterData.find(i => i.id == id);
-            currentUserId = row.user_id;
-            
-            document.getElementById('mName').innerText = row.name;
-            document.getElementById('mID').innerText = row.user_id;
-            document.getElementById('mFeedback').value = row.feedback || "";
-            document.getElementById('scoringModal').style.display = 'flex';
+// แก้ไขบรรทัดที่ประมาณ 305-315
+window.openEval = (id) => {
+    const row = masterData.find(i => i.id == id);
+    currentUserId = row.user_id;
+    
+    document.getElementById('mName').innerText = row.name;
+    document.getElementById('mID').innerText = row.user_id;
+    document.getElementById('mFeedback').value = row.feedback || "";
+    document.getElementById('scoringModal').style.display = 'flex';
 
-            // ดึงไฟล์เสียง S1-S5 จาก URLs ในตาราง
-            const container = document.getElementById('mAudioContainer');
-            container.innerHTML = '';
-            
-            const steps = [
-                { lab: 'S1', url: row.s1_audio_url },
-                { lab: 'S1.5', url: row.s1_5_audio_url },
-                { lab: 'S2', url: row.s2_audio_url },
-                { lab: 'S3', url: row.s3_audio_url },
-                { lab: 'S4', url: url: row.s4_audio_url },
-                { lab: 'S5', url: row.s5_audio_url }
-            ];
+    const container = document.getElementById('mAudioContainer');
+    container.innerHTML = '';
+    
+    // รายการไฟล์เสียง (แก้ไขจุด url: ซ้ำแล้ว)
+    const steps = [
+        { lab: 'S1', url: row.s1_audio_url },
+        { lab: 'S1.5', url: row.s1_5_audio_url },
+        { lab: 'S2', url: row.s2_audio_url },
+        { lab: 'S3', url: row.s3_audio_url },
+        { lab: 'S4', url: row.s4_audio_url }, // แก้ไขตรงนี้ให้เหลือ url: อันเดียว
+        { lab: 'S5', url: row.s5_audio_url }
+    ];
 
-            steps.forEach(s => {
-                if (s.url) {
-                    container.innerHTML += `
-                        <div class="audio-player-card">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="badge bg-primary rounded-pill">ขั้นตอน ${s.lab}</span>
-                                <a href="${s.url}" target="_blank" class="small text-decoration-none">ลิงก์ตรง <i class="bi bi-box-arrow-up-right"></i></a>
-                            </div>
-                            <audio controls class="w-100"><source src="${s.url}" type="audio/webm"></audio>
-                        </div>`;
-                }
-            });
+    steps.forEach(s => {
+        if (s.url) {
+            container.innerHTML += `
+                <div class="audio-player-card">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge bg-primary rounded-pill">ขั้นตอน ${s.lab}</span>
+                        <a href="${s.url}" target="_blank" class="small text-decoration-none">ลิงก์ตรง <i class="bi bi-box-arrow-up-right"></i></a>
+                    </div>
+                    <audio controls class="w-100"><source src="${s.url}" type="audio/webm"></audio>
+                </div>`;
+        }
+    });
 
-            if (container.innerHTML === '') container.innerHTML = '<div class="alert alert-warning">ไม่พบไฟล์เสียงในตาราง</div>';
-        };
+    if (container.innerHTML === '') container.innerHTML = '<div class="alert alert-warning">ไม่พบไฟล์เสียงในตาราง</div>';
+};
 
         // 4. บันทึกผลประเมินลง Supabase
         document.getElementById('btnSaveEval').onclick = async () => {
