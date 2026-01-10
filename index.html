@@ -152,57 +152,72 @@ window.scanStorageAndOpen = async (userId, name) => {
 
     playlist.innerHTML = ''; 
 
-    // 2. วนลูปสร้างตัวเล่นเสียง (ใช้ฟังก์ชันของ Supabase โดยตรงเพื่อความชัวร์)
-    files.forEach(file => {
-        if (file.name === '.emptyFolderPlaceholder') return;
-
-        // --- แก้ไขจุดนี้: ใช้ getPublicUrl ของระบบเพื่อสร้าง URL ที่ถูกต้องตามมาตรฐาน ---
-        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${userId}/${file.name}`);
-
-        playlist.innerHTML += `
-            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-success bg-white rounded">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark small"><i class="bi bi-file-earmark-music"></i> ${file.name}</span>
-                </div>
-                
-                <audio controls class="w-100" style="height: 35px;" 
-                       onerror="this.parentElement.innerHTML += '<div class='text-danger small'>โหลดไฟล์ไม่ได้: กรุณาเช็ค CORS หรือลิงก์ไฟล์</div>'">
-                    <source src="${publicUrl}" type="audio/webm">
-                    <source src="${publicUrl}" type="audio/mpeg">
-                    บราวเซอร์ไม่รองรับ
-                </audio>
-
-                <div class="text-end mt-2">
-                    <a href="${publicUrl}" target="_blank" class="btn btn-sm btn-light border py-0" style="font-size: 10px;">
-                        <i class="bi bi-box-arrow-up-right"></i> ตรวจสอบลิงก์ตรง (ถ้าเล่นไม่ได้ให้คลิก)
-                    </a>
-                </div>
-            </div>`;
-    });
-};
-
-// --- ฟังก์ชันเสริม: ในกรณีที่ไฟล์ไม่ได้อยู่ในโฟลเดอร์ แต่อยู่ข้างนอก ---
-window.scanRootFolder = async (userId) => {
-    const playlist = document.getElementById('audioPlaylist');
-    playlist.innerHTML = '<div class="text-center p-3">กำลังสแกนหาไฟล์จากหน้าแรก...</div>';
-
-    const { data: allFiles } = await supabase.storage.from('responses').list('');
+window.scanStorageAndOpen = async (userId, name) => {
+    activeUserId = userId;
+    document.getElementById('modalTraineeName').textContent = name;
+    document.getElementById('scoringModal').style.display = 'flex';
     
-    // กรองหาไฟล์ที่มีชื่อ userId อยู่ข้างใน
-    const matchedFiles = allFiles.filter(f => f.name.includes(userId));
+    const playlist = document.getElementById('audioPlaylist');
+    
+    // --- โหมดค้างหน้าจอเพื่อตรวจสอบ (Sticky Info) ---
+    playlist.innerHTML = `
+        <div class="p-3 border rounded bg-light mb-3">
+            <h6 class="fw-bold text-primary">ข้อมูลการค้นหา:</h6>
+            <div class="mb-2">
+                <small class="text-muted">ชื่อโฟลเดอร์ที่ระบบกำลังหา:</small><br>
+                <code id="currentIdCode" class="fs-6 text-dark" style="word-break: break-all;">${userId}</code>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary py-0" onclick="navigator.clipboard.writeText('${userId}'); alert('คัดลอกรหัสแล้ว');">
+                <i class="bi bi-clipboard"></i> คัดลอกรหัสเพื่อไปเช็คใน Storage
+            </button>
+            <hr>
+            <div id="statusInfo" class="small text-secondary">🔍 กำลังเชื่อมต่อ Storage...</div>
+        </div>
+        <div id="fileListContainer"></div>
+    `;
 
-    if (matchedFiles.length === 0) {
-        playlist.innerHTML = '<div class="alert alert-danger">ไม่พบไฟล์ที่มีชื่อเกี่ยวข้องกับรหัสนี้เลยใน Storage</div>';
+    const statusInfo = document.getElementById('statusInfo');
+    const container = document.getElementById('fileListContainer');
+
+    // 1. ลองลิสต์ไฟล์จาก Storage
+    const { data: files, error } = await supabase.storage.from('responses').list(userId);
+
+    if (error) {
+        statusInfo.innerHTML = `<span class="text-danger">❌ เกิดข้อผิดพลาด: ${error.message}</span>`;
         return;
     }
 
-    playlist.innerHTML = '<h6 class="mb-3 fw-bold text-info">พบไฟล์จากหน้าแรก:</h6>';
-    matchedFiles.forEach(file => {
-        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(file.name);
-        playlist.innerHTML += `
-            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-info bg-white rounded">
-                <span class="file-name small fw-bold">${file.name}</span>
-                <audio controls src="${publicUrl}" class="w-100 mt-2" style="height: 35px;"></audio>
+    if (!files || files.length === 0 || (files.length === 1 && files[0].name === '.emptyFolderPlaceholder')) {
+        statusInfo.innerHTML = `<span class="text-warning">⚠️ ไม่พบไฟล์ในโฟลเดอร์นี้</span>`;
+        container.innerHTML = `
+            <div class="alert alert-secondary small">
+                <b>คำแนะนำ:</b> รหัสข้างต้นอาจจะไม่ตรงกับชื่อโฟลเดอร์ใน Supabase Storage <br>
+                กรุณาตรวจสอบว่าใน Bucket <b>responses</b> มีโฟลเดอร์ชื่อตรงกับรหัสข้างต้นหรือไม่
+            </div>`;
+        return;
+    }
+
+    // 2. ถ้าเจอไฟล์ ให้โชว์เครื่องเล่นเสียง
+    statusInfo.innerHTML = `<span class="text-success">✅ ตรวจพบ ${files.length} ไฟล์</span>`;
+    files.forEach(file => {
+        if (file.name === '.emptyFolderPlaceholder') return;
+
+        // สร้าง URL แบบเต็ม
+        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${userId}/${file.name}`);
+
+        container.innerHTML += `
+            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-success bg-white rounded">
+                <div class="small fw-bold mb-2 text-truncate">📂 ${file.name}</div>
+                <audio controls class="w-100" style="height: 35px;">
+                    <source src="${publicUrl}" type="audio/webm">
+                    <source src="${publicUrl}" type="audio/mpeg">
+                    <source src="${publicUrl}" type="audio/wav">
+                </audio>
+                <div class="mt-2 text-end">
+                    <a href="${publicUrl}" target="_blank" class="btn btn-sm btn-link py-0" style="font-size: 11px;">
+                        <i class="bi bi-download"></i> ลิงก์ตรง (คลิกเพื่อเช็คไฟล์)
+                    </a>
+                </div>
             </div>`;
     });
 };
