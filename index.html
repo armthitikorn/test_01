@@ -136,60 +136,68 @@
                     </tr>`;
             });
         }
-
 window.scanStorageAndOpen = async (userId, name) => {
     activeUserId = userId;
     document.getElementById('modalTraineeName').textContent = name;
     document.getElementById('scoringModal').style.display = 'flex';
     
     const playlist = document.getElementById('audioPlaylist');
-    playlist.innerHTML = `<div class="p-3 border rounded bg-light mb-3">
-        <small class="text-muted">กำลังค้นหาไฟล์เสียงเชิงลึกในรหัส:</small><br>
-        <code class="text-primary">${userId}</code>
-    </div>
-    <div id="statusLoad" class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div> กำลังสแกน S1, S1.5, S2...</div>`;
+    playlist.innerHTML = `
+        <div class="p-3 border rounded bg-light mb-3">
+            <small class="text-muted">กำลังค้นหาไฟล์เสียงในห้องย่อยของ:</small><br>
+            <code class="text-primary" style="word-break: break-all;">${userId}</code>
+        </div>
+        <div id="statusScan" class="text-center p-2">
+            <div class="spinner-border spinner-border-sm text-primary"></div> 
+            กำลังมุดหาไฟล์ใน S1, S1.5, S2...
+        </div>`;
 
-    // รายการโฟลเดอร์ย่อยที่เราต้องการจะเข้าไปเช็ค
-    const steps = ['S1', 'S1.5', 'S2', 'S3', 'S4', 'S5'];
-    let hasFoundAnyFile = false;
-    playlist.innerHTML += `<div id="audioList"></div>`;
-    const audioList = document.getElementById('audioList');
+    // รายชื่อห้องย่อยที่เราต้องเดินเข้าไปตรวจ (ตามโครงสร้างที่คุณแจ้ง)
+    const subFolders = ['S1', 'S1.5', 'S2', 'S3', 'S4', 'S5'];
+    let fileCount = 0;
+    
+    // สร้างพื้นที่รองรับรายการไฟล์
+    const listContainer = document.createElement('div');
+    playlist.appendChild(listContainer);
 
-    // วนลูปเข้าตรวจทีละ Folder (S1 -> S5)
-    for (const step of steps) {
-        const fullPath = `${userId}/${step}`; // สร้าง Path เช่น UUID/S1
+    // วนลูปเดินเข้าทีละห้อง
+    for (const folder of subFolders) {
+        const fullPath = `${userId}/${folder}`; // เช่น b3c5fe87.../S1
         
         const { data: files, error } = await supabase.storage.from('responses').list(fullPath);
 
         if (!error && files && files.length > 0) {
             files.forEach(file => {
-                if (file.name.includes('.empty')) return;
-                hasFoundAnyFile = true;
+                if (file.name.includes('.empty')) return; // ข้ามไฟล์ขยะ
+                fileCount++;
 
-                // สร้าง URL ตรงมุดเข้าถึงไฟล์ข้างในสุด
+                // สร้างลิงก์มุดเข้าไปถึงตัวไฟล์
                 const { data: { publicUrl } } = supabase.storage.from('responses')
                     .getPublicUrl(`${fullPath}/${file.name}`);
 
-                audioList.innerHTML += `
+                listContainer.innerHTML += `
                     <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-primary bg-white rounded">
-                        <div class="fw-bold small text-dark mb-1">
-                            <i class="bi bi-folder-fill text-warning"></i> โฟลเดอร์ ${step} 
-                            <span class="text-muted ml-2">| ${file.name.substring(0, 10)}...</span>
+                        <div class="fw-bold small text-dark mb-2">
+                            <i class="bi bi-folder-fill text-warning"></i> ห้อง: ${folder} 
+                            <span class="text-muted fw-normal ms-2">| ${file.name}</span>
                         </div>
                         <audio controls preload="metadata" class="w-100" style="height: 35px;">
                             <source src="${publicUrl}" type="audio/webm">
                             <source src="${publicUrl}" type="audio/mpeg">
                         </audio>
+                        <div class="text-end mt-1">
+                            <a href="${publicUrl}" target="_blank" style="font-size: 10px;" class="text-decoration-none text-secondary">
+                                <i class="bi bi-link-45deg"></i> ลิงก์ตรงไฟล์นี้
+                            </a>
+                        </div>
                     </div>`;
             });
         }
     }
 
-    document.getElementById('statusLoad').style.display = 'none';
-
-    if (!hasFoundAnyFile) {
-        audioList.innerHTML = `<div class="alert alert-warning small">ไม่พบไฟล์เสียงใน Folder ย่อย (S1-S5)</div>`;
-    }
+    document.getElementById('statusScan').innerHTML = fileCount > 0 
+        ? `<span class="text-success small fw-bold">✅ ตรวจพบทั้งหมด ${fileCount} ไฟล์</span>`
+        : `<span class="text-danger small fw-bold">❌ ไม่พบไฟล์ในห้อง S1-S5</span>`;
 };
 
         // --- 3. ระบบคำนวณและบันทึกคะแนน ---
