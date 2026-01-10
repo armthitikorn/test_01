@@ -1,383 +1,131 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Dashboard ประเมินผล Simulator | Professional Version</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Audio Storage Explorer</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
-        
-        :root {
-            --primary-navy: #0f172a;
-            --accent-blue: #3b82f6;
-            --success-green: #10b981;
-            --bg-light: #f8fafc;
-        }
-
-        body { font-family: 'Sarabun', sans-serif; background-color: var(--bg-light); color: #1e293b; }
-        
-        /* Login Page UI */
-        #loginPage { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--primary-navy); }
-        .login-card { width: 400px; border-radius: 24px; padding: 40px; border: none; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-
-        /* Dashboard Main Layout */
-        .main-content { display: none; padding: 30px 50px; }
-        .top-header { margin-bottom: 30px; }
-
-        /* Status Cards (KPIs) */
-        .kpi-card { background: white; border-radius: 20px; border: none; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; }
-        .kpi-card:hover { transform: translateY(-5px); }
-        .kpi-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-
-        /* Advanced Filter Panel */
-        .filter-panel { background: white; border-radius: 20px; padding: 25px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
-        .form-select, .form-control { border-radius: 12px; padding: 10px 15px; border: 1px solid #cbd5e1; }
-
-        /* Professional Table UI */
-        .table-container { background: white; border-radius: 24px; padding: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-        .table thead th { color: #64748b; font-size: 0.8rem; text-transform: uppercase; padding: 20px; border-bottom: 2px solid #f1f5f9; }
-        .table tbody td { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-
-        /* Audio & Scoring Modal */
-        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-        .modal-inner { background: white; border-radius: 32px; width: 95%; max-width: 1150px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
-        .modal-body-scroll { padding: 40px; overflow-y: auto; }
-        
-        .audio-item { background: #f1f5f9; border-radius: 18px; padding: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        .score-box { background: #f8fafc; border-radius: 24px; padding: 30px; border: 1px solid #e2e8f0; }
-        .total-banner { background: var(--primary-navy); color: white; border-radius: 20px; padding: 25px; text-align: center; }
-
-        .btn-rounded { border-radius: 100px; padding: 10px 25px; font-weight: 600; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 30px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .status-box { padding: 10px; margin-bottom: 20px; border-radius: 5px; text-align: center; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .ready { background: #d4edda; color: #155724; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        audio { height: 35px; width: 200px; }
+        .btn-refresh { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; float: right; }
+        .user-badge { background: #6c757d; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+        .part-badge { background: #17a2b8; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
     </style>
 </head>
 <body>
 
-    <div id="loginPage">
-        <div class="card login-card shadow-lg">
-            <div class="text-center mb-4">
-                <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-3 mb-3"><i class="bi bi-person-workspace fs-3"></i></div>
-                <h4 class="fw-bold">Admin Dashboard</h4>
-                <p class="text-muted small">ระบบประเมินผลพนักงาน Simulator</p>
-            </div>
-            <div class="mb-3">
-                <input type="password" id="adminPass" class="form-control py-3 text-center" placeholder="ป้อนรหัสผ่าน 8 หลัก">
-            </div>
-            <button id="loginBtn" class="btn btn-primary w-100 py-3 fw-bold rounded-pill">เข้าสู่ระบบ</button>
-        </div>
-    </div>
+<div class="container">
+    <button class="btn-refresh" onclick="scanStorage()">🔄 รีเฟรชข้อมูล</button>
+    <h1>📂 Audio Storage Explorer</h1>
+    
+    <div id="status" class="status-box loading">กำลังเตรียมการเชื่อมต่อ...</div>
 
-    <div id="mainContent" class="main-content container-fluid">
-        <div class="top-header d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="fw-bold text-dark">Assessment Overview</h2>
-                <p class="text-muted mb-0">จัดการและตรวจสอบผลการทดสอบรายบุคคล</p>
-            </div>
-            <div class="d-flex gap-2">
-                <button id="exportCsvBtn" class="btn btn-outline-success btn-rounded"><i class="bi bi-file-earmark-spreadsheet"></i> ส่งออกรายงาน</button>
-                <button id="logoutBtn" class="btn btn-danger btn-rounded">ออกจากระบบ</button>
-            </div>
-        </div>
+    <table id="fileTable">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Section</th>
+                <th>ชื่อไฟล์</th>
+                <th>เครื่องมือเล่นเสียง</th>
+                <th>ลิงก์</th>
+            </tr>
+        </thead>
+        <tbody id="fileList">
+            </tbody>
+    </table>
+</div>
 
-        <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="card kpi-card">
-                    <div class="d-flex align-items-center">
-                        <div class="kpi-icon bg-primary text-white me-3 shadow-sm"><i class="bi bi-people"></i></div>
-                        <div><small class="text-muted fw-bold">พนักงานทั้งหมด</small><h3 class="fw-bold mb-0" id="statTotal">0</h3></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card kpi-card">
-                    <div class="d-flex align-items-center">
-                        <div class="kpi-icon bg-success text-white me-3 shadow-sm"><i class="bi bi-check2-circle"></i></div>
-                        <div><small class="text-muted fw-bold">ประเมินแล้ว</small><h3 class="fw-bold mb-0" id="statDone">0</h3></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card kpi-card">
-                    <div class="d-flex align-items-center">
-                        <div class="kpi-icon bg-warning text-white me-3 shadow-sm"><i class="bi bi-hourglass-split"></i></div>
-                        <div><small class="text-muted fw-bold">ค้างประเมิน</small><h3 class="fw-bold mb-0" id="statWait">0</h3></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card kpi-card border-start border-primary border-5">
-                    <div class="d-flex align-items-center">
-                        <div class="kpi-icon bg-info text-white me-3 shadow-sm"><i class="bi bi-bar-chart"></i></div>
-                        <div><small class="text-muted fw-bold">คะแนนเฉลี่ย</small><h3 class="fw-bold mb-0" id="statAvg">0.0</h3></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        <div class="filter-panel shadow-sm">
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <label class="small fw-bold text-muted mb-2">ตั้งแต่วันที่</label>
-                    <input type="date" id="dateFrom" class="form-control">
-                </div>
-                <div class="col-md-2">
-                    <label class="small fw-bold text-muted mb-2">ถึงวันที่</label>
-                    <input type="date" id="dateTo" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-2">แผนก (Department)</label>
-                    <select id="selDept" class="form-select">
-                        <option value="">ทั้งหมด</option>
-                        <option value="ฝ่ายขาย">ฝ่ายขาย (Sales)</option>
-                        <option value="ฝ่าย Agent">ฝ่าย Agent</option>
-                        <option value="ฝ่ายเทรนเนอร์">ฝ่ายเทรนเนอร์ (Trainer)</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-2">ระดับ (Level)</label>
-                    <select id="selLevel" class="form-select">
-                        <option value="">ทุกระดับ</option>
-                        <option value="เนอสเซอรี่">เนอสเซอรี่ (Nursery)</option>
-                        <option value="นิวไลซิ่งสตาร์">นิวไลซิ่งสตาร์ (New Rising Star)</option>
-                        <option value="รีเจ้นท์">รีเจ้นท์ (Legend)</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button id="btnFilter" class="btn btn-primary w-100 btn-rounded fw-bold"><i class="bi bi-funnel"></i> ค้นหา</button>
-                </div>
-            </div>
-        </div>
+    // ดึงค่า Config จากโค้ดต้นฉบับ
+    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-        <div class="table-container border">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>พนักงาน</th>
-                            <th>แผนก</th>
-                            <th>ระดับ</th>
-                            <th>วันที่ส่ง</th>
-                            <th>สถานะคะแนน</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mainTableBody">
-                        <tr><td colspan="6" class="text-center p-5 text-muted">กำลังโหลดข้อมูลพนักงาน...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    async function scanStorage() {
+        const statusEl = document.getElementById('status');
+        const listEl = document.getElementById('fileList');
+        
+        statusEl.className = 'status-box loading';
+        statusEl.textContent = '⏳ กำลังสแกนหาไฟล์เสียงใน Storage... (โปรดรอสักครู่)';
+        listEl.innerHTML = '';
 
-    <div id="scoringModal" class="scoring-modal">
-        <div class="modal-inner shadow-2xl">
-            <div class="modal-body-scroll">
-                <div class="d-flex justify-content-between align-items-center mb-5">
-                    <div>
-                        <h2 class="fw-bold mb-1" id="mEmpName">Name</h2>
-                        <p class="text-muted mb-0">รหัสพนักงาน: <span id="mEmpID" class="fw-bold text-primary">ID</span></p>
-                    </div>
-                    <button class="btn-close p-3" onclick="document.getElementById('scoringModal').style.display='none'"></button>
-                </div>
+        try {
+            // 1. ดึงโฟลเดอร์ระดับบนสุด (User IDs)
+            const { data: users, error: userError } = await supabase.storage.from('responses').list('');
+            if (userError) throw userError;
 
-                <div class="row">
-                    <div class="col-md-6 pe-lg-5 border-end">
-                        <h5 class="fw-bold mb-4"><i class="bi bi-mic-fill text-danger"></i> ไฟล์เสียงแต่ละขั้นตอน (S1-S5)</h5>
-                        <div id="audioListContainer">
-                            </div>
-                    </div>
+            let fileCount = 0;
 
-                    <div class="col-md-6 ps-lg-5">
-                        <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-pencil-square"></i> เกณฑ์คะแนน (0-5)</h5>
-                        <div class="score-box mb-4">
-                            <div class="row g-3">
-                                <div class="col-4"><label class="small fw-bold">S1</label><input type="number" id="inS1" class="form-control" max="5" value="0"></div>
-                                <div class="col-4"><label class="small fw-bold">S1.5</label><input type="number" id="inS1_5" class="form-control" max="5" value="0"></div>
-                                <div class="col-4"><label class="small fw-bold">S2</label><input type="number" id="inS2" class="form-control" max="5" value="0"></div>
-                                <div class="col-4"><label class="small fw-bold">S3</label><input type="number" id="inS3" class="form-control" max="5" value="0"></div>
-                                <div class="col-4"><label class="small fw-bold">S4</label><input type="number" id="inS4" class="form-control" max="5" value="0"></div>
-                                <div class="col-4"><label class="small fw-bold">S5</label><input type="number" id="inS5" class="form-control" max="5" value="0"></div>
-                                <div class="col-12 mt-3">
-                                    <label class="small fw-bold">ข้อเสนอแนะสำหรับการปรับปรุง</label>
-                                    <textarea id="inFeedback" class="form-control" rows="3" placeholder="ระบุสิ่งที่พนักงานต้องพัฒนา..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="total-banner shadow">
-                            <h6 class="mb-1 text-uppercase opacity-75">คะแนนประเมินรวม</h6>
-                            <h2 class="fw-bold mb-0"><span id="sumDisplay">0</span> <small class="fs-6">/ 30</small></h2>
-                        </div>
-                        <button id="saveBtn" class="btn btn-success w-100 mt-4 py-3 btn-rounded fw-bold btn-lg shadow">บันทึกผลการประเมิน</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+            for (const user of users) {
+                if (user.name === '.emptyFolderPlaceholder') continue;
 
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+                // 2. ดึงโฟลเดอร์ Section (S1, S2, S3...) ภายใน User
+                const { data: sections, error: sectionError } = await supabase.storage.from('responses').list(user.name);
+                if (sectionError) continue;
 
-        // 1. กำหนดค่า Supabase
-        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+                for (const section of sections) {
+                    // 3. ดึงไฟล์ .webm ภายในแต่ละ Section
+                    const path = `${user.name}/${section.name}`;
+                    const { data: files, error: fileError } = await supabase.storage.from('responses').list(path);
+                    if (fileError) continue;
 
-        let masterData = [];
-        let currentUserId = null;
-
-        // 2. ระบบ Login
-        document.getElementById('loginBtn').onclick = () => {
-            if (document.getElementById('adminPass').value === "12345678") {
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                fetchData();
-            } else { alert('รหัสผ่านไม่ถูกต้อง'); }
-        };
-
-        // 3. ดึงข้อมูลจากตาราง submissions (แบบมี Filters)
-        async function fetchData() {
-            let query = supabase.from('submissions').select('*').order('created_at', { ascending: false });
-
-            const fStart = document.getElementById('dateFrom').value;
-            const fEnd = document.getElementById('dateTo').value;
-            const fDept = document.getElementById('selDept').value;
-            const fLevel = document.getElementById('selLevel').value;
-
-            if (fStart) query = query.gte('created_at', fStart);
-            if (fEnd) query = query.lte('created_at', fEnd + 'T23:59:59');
-            if (fDept) query = query.eq('user_group', fDept);
-            if (fLevel) query = query.eq('staff_level', fLevel);
-
-            const { data, error } = await query;
-            if (error) { console.error(error); return; }
-
-            masterData = data;
-            renderUI(data);
-        }
-
-        // 4. แสดงผลข้อมูลลงในตารางและ KPI
-        function renderUI(data) {
-            // คำนวณ KPIs
-            document.getElementById('statTotal').innerText = data.length;
-            const evaluated = data.filter(i => i.manual_score).length;
-            document.getElementById('statDone').innerText = evaluated;
-            document.getElementById('statWait').innerText = data.length - evaluated;
-            
-            const totalScore = data.reduce((acc, curr) => acc + (parseFloat(curr.manual_score) || 0), 0);
-            document.getElementById('statAvg').innerText = evaluated > 0 ? (totalScore / evaluated).toFixed(1) : "0.0";
-
-            const tbody = document.getElementById('mainTableBody');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const badge = item.manual_score 
-                    ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">ประเมินแล้ว: ${item.manual_score}</span>`
-                    : `<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning px-3 text-dark">รอประเมิน</span>`;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><div class="fw-bold">${item.name || 'พนักงานกู้คืน'}</div><small class="text-muted">${item.user_id}</small></td>
-                        <td><span class="text-secondary fw-bold">${item.user_group || '-'}</span></td>
-                        <td><span class="badge bg-light text-dark border">${item.staff_level || '-'}</span></td>
-                        <td class="small">${new Date(item.created_at).toLocaleDateString('th-TH')}</td>
-                        <td>${badge}</td>
-                        <td>
-                            <button class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm" onclick="window.launchEval('${item.id}')">
-                                <i class="bi bi-play-circle"></i> ตรวจงาน
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        // 5. เปิดหน้าต่างประเมิน (แก้ไข Syntax S4 เรียบร้อย)
-        window.launchEval = (id) => {
-            const row = masterData.find(i => i.id == id);
-            currentUserId = row.user_id;
-            
-            document.getElementById('mEmpName').innerText = row.name || 'ไม่ระบุชื่อ';
-            document.getElementById('mEmpID').innerText = row.user_id;
-            document.getElementById('inFeedback').value = row.feedback || "";
-            document.getElementById('scoringModal').style.display = 'flex';
-
-            const audioBox = document.getElementById('audioListContainer');
-            audioBox.innerHTML = '';
-            
-            // ชุดข้อมูลไฟล์เสียง (ตรวจสอบความถูกต้องของ Syntax แล้ว)
-            const audioMapping = [
-                { lab: 'S1', url: row.s1_audio_url },
-                { lab: 'S1.5', url: row.s1_5_audio_url },
-                { lab: 'S2', url: row.s2_audio_url },
-                { lab: 'S3', url: row.s3_audio_url },
-                { lab: 'S4', url: row.s4_audio_url },
-                { lab: 'S5', url: row.s5_audio_url }
-            ];
-
-            audioMapping.forEach(step => {
-                if (step.url) {
-                    audioBox.innerHTML += `
-                        <div class="audio-item shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-primary px-3 rounded-pill">ขั้นตอน ${step.lab}</span>
-                                <a href="${step.url}" target="_blank" class="small text-decoration-none text-muted">ลิงก์ตรง <i class="bi bi-box-arrow-up-right"></i></a>
-                            </div>
-                            <audio controls class="w-100" preload="metadata"><source src="${step.url}" type="audio/webm"></audio>
-                        </div>`;
+                    for (const file of files) {
+                        if (file.name.endsWith('.webm')) {
+                            fileCount++;
+                            // สร้าง Public URL
+                            const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${path}/${file.name}`);
+                            
+                            appendRow(user.name, section.name, file.name, publicUrl);
+                        }
+                    }
                 }
-            });
+            }
 
-            if (audioBox.innerHTML === '') audioBox.innerHTML = '<div class="alert alert-secondary text-center small">ไม่พบข้อมูลไฟล์เสียงในฐานข้อมูล</div>';
-        };
+            statusEl.className = 'status-box ready';
+            statusEl.textContent = `✅ พบไฟล์ทั้งหมด ${fileCount} ไฟล์`;
+            
+            if(fileCount === 0) {
+                listEl.innerHTML = '<tr><td colspan="5" style="text-align:center;">ไม่พบไฟล์เสียงในระบบ</td></tr>';
+            }
 
-        // 6. บันทึกคะแนน
-        document.getElementById('saveBtn').onclick = async () => {
-            const scoreIDs = ['inS1', 'inS1_5', 'inS2', 'inS3', 'inS4', 'inS5'];
-            const scores = scoreIDs.map(id => parseInt(document.getElementById(id).value) || 0);
-            const total = scores.reduce((a, b) => a + b, 0);
+        } catch (err) {
+            statusEl.className = 'status-box';
+            statusEl.style.background = '#f8d7da';
+            statusEl.style.color = '#721c24';
+            statusEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+        }
+    }
 
-            const { error } = await supabase.from('submissions')
-                .update({
-                    manual_score: total.toString(),
-                    feedback: document.getElementById('inFeedback').value,
-                    s1_score: scores[0], s1_5_score: scores[1], s2_score: scores[2],
-                    s3_score: scores[3], s4_score: scores[4], s5_score: scores[5]
-                })
-                .match({ user_id: currentUserId });
+    function appendRow(userId, section, fileName, url) {
+        const listEl = document.getElementById('fileList');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><span class="user-badge">${userId.substring(0,8)}...</span></td>
+            <td><span class="part-badge">${section}</span></td>
+            <td style="font-size: 0.85em; color: #666;">${fileName}</td>
+            <td><audio controls src="${url}"></audio></td>
+            <td><a href="${url}" target="_blank">🔗 เปิดไฟล์</a></td>
+        `;
+        listEl.appendChild(row);
+    }
 
-            if (!error) {
-                alert("บันทึกผลประเมินเรียบร้อย!");
-                document.getElementById('scoringModal').style.display = 'none';
-                fetchData();
-            } else { alert("เกิดข้อผิดพลาด: " + error.message); }
-        };
+    // รันครั้งแรกเมื่อโหลดหน้าจอ
+    window.scanStorage = scanStorage;
+    window.onload = scanStorage;
 
-        // Export Report
-        document.getElementById('exportCsvBtn').onclick = () => {
-            let csv = "\uFEFFพนักงาน,ฝ่าย,ระดับ,วันที่,คะแนนรวม\n";
-            masterData.forEach(r => {
-                csv += `${r.name},${r.user_group},${r.staff_level},${new Date(r.created_at).toLocaleDateString()},${r.manual_score || 'N/A'}\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `Summary_Report.csv`;
-            link.click();
-        };
+</script>
 
-        // Auto Calc Score
-        const scoreFields = ['inS1', 'inS1_5', 'inS2', 'inS3', 'inS4', 'inS5'];
-        scoreFields.forEach(id => {
-            document.getElementById(id).oninput = () => {
-                const total = scoreFields.reduce((acc, currentID) => acc + (parseInt(document.getElementById(currentID).value) || 0), 0);
-                document.getElementById('sumDisplay').innerText = total;
-            };
-        });
-
-        document.getElementById('btnFilter').onclick = fetchData;
-        document.getElementById('logoutBtn').onclick = () => location.reload();
-    </script>
 </body>
 </html>
