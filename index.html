@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Evaluation Dashboard (Fixed Filter)</title>
+    <title>Evaluation Dashboard (Fixed & Sync)</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
@@ -11,21 +11,27 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; color: #34495e; }
-        .login-card { max-width: 400px; margin: auto; margin-top: 100px; }
-        .main-content { display: none; padding: 20px; }
-        .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
-        .audio-list-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        
+        #loginPage { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); }
+        .login-card { max-width: 400px; width: 100%; padding: 20px; border-radius: 15px; }
+        
+        .main-content { display: none; padding: 30px; }
+        .table-container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1050; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
+        
+        .audio-card { border-left: 5px solid #3498db; background: #f8f9fa; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+        .btn-play { padding: 5px 15px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="loginPage" class="container">
+    <div id="loginPage">
         <div class="card login-card shadow">
             <div class="card-body text-center">
                 <h3 class="mb-4">Dashboard Login</h3>
-                <input type="password" id="adminPass" class="form-control mb-3" placeholder="รหัสผ่านผู้ดูแล">
+                <input type="password" id="adminPass" class="form-control mb-3" placeholder="ระบุรหัสผ่าน">
                 <button id="loginBtn" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -33,70 +39,63 @@
 
     <div id="mainContent" class="main-content container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>📊 Dashboard ประเมินผล Simulator</h2>
-            <button id="logoutBtn" class="btn btn-outline-danger">ออกจากระบบ</button>
+            <h2 class="fw-bold"><i class="bi bi-speedometer2"></i> Simulator Dashboard</h2>
+            <button id="logoutBtn" class="btn btn-outline-danger btn-sm">ออกจากระบบ</button>
         </div>
 
         <div class="table-container">
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <label class="form-label small">ตั้งแต่วันที่</label>
-                    <input type="date" id="startDate" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small">ถึงวันที่</label>
-                    <input type="date" id="endDate" class="form-control">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button id="filterBtn" class="btn btn-success w-100"><i class="bi bi-search"></i> ค้นหา</button>
-                </div>
+            <div class="row g-3 mb-4 align-items-end">
+                <div class="col-md-3"><label class="small">วันที่เริ่มต้น</label><input type="date" id="startDate" class="form-control"></div>
+                <div class="col-md-3"><label class="small">วันที่สิ้นสุด</label><input type="date" id="endDate" class="form-control"></div>
+                <div class="col-md-2"><button id="filterBtn" class="btn btn-primary w-100"><i class="bi bi-search"></i> ค้นหา</button></div>
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>วันที่ส่ง</th>
-                            <th>ชื่อพนักงาน</th>
+                            <th>วันที่/เวลา</th>
+                            <th>พนักงาน</th>
                             <th>กลุ่มงาน</th>
-                            <th>ประกัน</th>
-                            <th>ระดับความยาก</th>
-                            <th>สถานะคะแนน</th>
+                            <th>หัวข้อ/ระดับความยาก</th>
+                            <th>คะแนนประเมิน</th>
                             <th>การจัดการ</th>
                         </tr>
                     </thead>
-                    <tbody id="submissionTable"></tbody>
+                    <tbody id="submissionTable">
+                        </tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <div id="scoringModal" class="scoring-modal">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg">
             <div class="d-flex justify-content-between">
-                <h4>ประเมินผล: <span id="modalTraineeName" class="text-primary"></span></h4>
+                <h4><i class="bi bi-person-check"></i> ประเมินผล: <span id="modalTraineeName" class="text-primary"></span></h4>
                 <button onclick="closeModal()" class="btn-close"></button>
             </div>
             <hr>
             
-            <div class="mb-4">
-                <h6><i class="bi bi-volume-up-fill"></i> ฟังเสียงการทดสอบทั้งหมด (Step 1-5)</h6>
-                <div id="audioPlaylist" class="bg-light p-3 rounded border" style="max-height: 300px; overflow-y: auto;">
+            <div class="row">
+                <div class="col-md-6 border-end">
+                    <h6 class="fw-bold mb-3 text-secondary">บันทึกการสนทนาย้อนหลัง</h6>
+                    <div id="audioPlaylist" style="max-height: 450px; overflow-y: auto; padding-right: 10px;">
+                        <div class="text-center text-muted">กำลังโหลดไฟล์เสียง...</div>
                     </div>
-            </div>
+                </div>
 
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label>คะแนนรวม (เต็ม 25)</label>
-                    <input type="number" id="manual_score" class="form-control" placeholder="ระบุคะแนน">
+                <div class="col-md-6 ps-4">
+                    <h6 class="fw-bold mb-3 text-secondary">เกณฑ์การให้คะแนน</h6>
+                    <div class="row g-3">
+                        <div class="col-6"><label>Step 1 (5)</label><input type="number" id="s1" class="form-control" max="5"></div>
+                        <div class="col-6"><label>Step 2 (5)</label><input type="number" id="s2" class="form-control" max="5"></div>
+                        <div class="col-6"><label>Step 3 (5)</label><input type="number" id="s3" class="form-control" max="5"></div>
+                        <div class="col-6"><label>Step 4 (5)</label><input type="number" id="s4" class="form-control" max="5"></div>
+                        <div class="col-12"><label>ข้อเสนอแนะ</label><textarea id="feedback" class="form-control" rows="3"></textarea></div>
+                    </div>
+                    <button id="saveManualBtn" class="btn btn-success w-100 mt-4">บันทึกคะแนนทั้งหมด</button>
                 </div>
-                <div class="col-md-12">
-                    <label>ข้อเสนอแนะ</label>
-                    <textarea id="feedback" class="form-control" rows="3"></textarea>
-                </div>
-            </div>
-            <div class="mt-4 text-end">
-                <button id="saveManualBtn" class="btn btn-primary px-5">บันทึกคะแนน</button>
             </div>
         </div>
     </div>
@@ -104,99 +103,104 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+        // --- Supabase Config ---
         const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        const VALID_PASS = "1234";
         let currentScoringId = null;
 
-        // --- ฟังก์ชันดึงข้อมูลแบบ Filter วันที่ได้จริง ---
+        // Login Logic
+        document.getElementById('loginBtn').onclick = () => {
+            if(document.getElementById('adminPass').value === VALID_PASS) {
+                document.getElementById('loginPage').style.display = "none";
+                document.getElementById('mainContent').style.display = "block";
+                fetchSubmissions();
+            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+        };
+
+        // 1. ดึงข้อมูลพนักงาน (เฉพาะแถวสรุป Part 0)
         async function fetchSubmissions() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            
+            let query = supabase.from('submissions').select('*').eq('part_number', 0).order('created_at', { ascending: false });
 
-            let query = supabase.from('submissions').select('*').eq('part_number', 0); // ดึงเฉพาะแถวสรุป
+            if(start && end) {
+                query = query.gte('created_at', `${start} 00:00:00`).lte('created_at', `${end} 23:59:59`);
+            }
 
-            if (startDate) query = query.gte('created_at', startDate + 'T00:00:00');
-            if (endDate) query = query.lte('created_at', endDate + 'T23:59:59');
-
-            const { data, error } = await query.order('created_at', { ascending: false });
-
-            if (error) return console.error(error);
-
+            const { data, error } = await query;
             const tbody = document.getElementById('submissionTable');
-            tbody.innerHTML = data.length === 0 ? '<tr><td colspan="7" class="text-center">ไม่พบข้อมูล</td></tr>' : '';
+            tbody.innerHTML = '';
 
-            data.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${new Date(item.created_at).toLocaleString('th-TH')}</td>
-                        <td>${item.name}</td>
-                        <td>${item.user_group || '-'}</td>
-                        <td>${item.insurance_type}</td>
-                        <td>${item.question_text}</td>
-                        <td><span class="badge ${item.manual_score ? 'bg-success' : 'bg-warning'}">${item.manual_score || 'รอตรวจ'}</span></td>
-                        <td><button onclick="window.openScoringModal('${item.id}', '${item.name}', '${item.user_id}')" class="btn btn-sm btn-primary">ดูรายละเอียด</button></td>
-                    </tr>`;
-            });
+            if(data) {
+                data.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="small">${new Date(item.created_at).toLocaleString('th-TH')}</td>
+                            <td class="fw-bold">${item.name}</td>
+                            <td>${item.user_group || '-'}</td>
+                            <td><span class="badge bg-light text-dark border">${item.question_text}</span></td>
+                            <td><span class="badge bg-primary">${item.manual_score || 'รอการประเมิน'}</span></td>
+                            <td><button onclick="openModal('${item.id}', '${item.name}', '${item.user_id}')" class="btn btn-sm btn-primary">ประเมิน</button></td>
+                        </tr>`;
+                });
+            }
         }
 
-        // --- ฟังก์ชันดึงไฟล์เสียงย่อยทั้งหมดมาแสดงในหน้าเดียว ---
-        window.openScoringModal = async (id, name, user_uuid) => {
+        // 2. ดึงไฟล์เสียงทั้งหมดมาโชว์ใน Modal
+        window.openModal = async (id, name, userId) => {
             currentScoringId = id;
             document.getElementById('modalTraineeName').textContent = name;
-            document.getElementById('audioPlaylist').innerHTML = 'กำลังโหลดไฟล์เสียง...';
+            document.getElementById('scoringModal').style.display = 'flex';
             
-            // ดึงไฟล์เสียงย่อยทุก Step (1-5) ที่มี user_id ตรงกัน
-            const { data: audios } = await supabase
-                .from('submissions')
-                .select('question_text, audio_url, customer_audio_url, part_number')
-                .eq('user_id', user_uuid)
+            const playlist = document.getElementById('audioPlaylist');
+            playlist.innerHTML = '<div class="text-center">กำลังดึงไฟล์เสียง...</div>';
+
+            // ดึงไฟล์ย่อย (Part 1-5) ทั้งหมดที่รหัส user_id ตรงกัน
+            const { data: audios } = await supabase.from('submissions')
+                .select('*')
+                .eq('user_id', userId)
                 .neq('part_number', 0)
                 .order('part_number', { ascending: true });
 
-            const playlist = document.getElementById('audioPlaylist');
             playlist.innerHTML = '';
-            
-            if(audios.length === 0) playlist.innerHTML = 'ไม่พบไฟล์เสียงประกอบ';
-
-            audios.forEach(aud => {
-                playlist.innerHTML += `
-                    <div class="audio-list-item">
-                        <div class="flex-grow-1">
-                            <div class="small fw-bold">Step ${aud.part_number}: ${aud.question_text}</div>
-                            <div class="d-flex gap-2 mt-1">
-                                <div class="text-muted small">เสียงลูกค้า:</div>
-                                <audio controls src="${aud.customer_audio_url}" style="height: 25px;"></audio>
-                                <div class="text-muted small ms-2">เสียงพนักงาน:</div>
-                                <audio controls src="${aud.audio_url}" style="height: 25px;"></audio>
+            if(audios && audios.length > 0) {
+                audios.forEach(aud => {
+                    playlist.innerHTML += `
+                        <div class="audio-card shadow-sm">
+                            <div class="small fw-bold text-primary mb-1">Step ${aud.part_number}: ${aud.question_text}</div>
+                            <div class="d-flex gap-2">
+                                ${aud.customer_audio_url ? `<button class="btn btn-sm btn-outline-info" onclick="new Audio('${aud.customer_audio_url}').play()">🔈 ฟังโจทย์ลูกค้า</button>` : ''}
+                                <button class="btn btn-sm btn-success" onclick="new Audio('${aud.audio_url}').play()">🎤 ฟังเสียงพนักงาน</button>
                             </div>
-                        </div>
-                    </div>`;
-            });
-            document.getElementById('scoringModal').style.display = 'flex';
+                        </div>`;
+                });
+            } else { playlist.innerHTML = '<div class="alert alert-warning">ไม่พบไฟล์เสียงแยกขั้นตอน</div>'; }
         };
 
         window.closeModal = () => { document.getElementById('scoringModal').style.display = 'none'; };
 
-        const handleLogin = () => {
-            if(document.getElementById('adminPass').value === "2456") { // ใช้รหัสเดิมของคุณ
-                document.getElementById('loginPage').style.display = "none";
-                document.getElementById('mainContent').style.display = "block";
-                fetchSubmissions(); // ดึงข้อมูลอัตโนมัติทันที
-            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+        // 3. บันทึกคะแนน
+        document.getElementById('saveManualBtn').onclick = async () => {
+            const score = document.getElementById('s1').value; // ปรับเพิ่มช่องคะแนนได้ตามต้องการ
+            const fb = document.getElementById('feedback').value;
+
+            const { error } = await supabase.from('submissions').update({
+                manual_score: score,
+                feedback: fb
+            }).eq('id', currentScoringId);
+
+            if(!error) {
+                alert("บันทึกคะแนนเรียบร้อย!");
+                closeModal();
+                fetchSubmissions();
+            }
         };
 
-        const saveScore = async () => {
-            const { error } = await supabase.from('submissions')
-                .update({ manual_score: document.getElementById('manual_score').value, feedback: document.getElementById('feedback').value })
-                .eq('id', currentScoringId);
-            if(!error) { alert("บันทึกคะแนนสำเร็จ"); closeModal(); fetchSubmissions(); }
-        };
-
-        document.getElementById('loginBtn').onclick = handleLogin;
         document.getElementById('filterBtn').onclick = fetchSubmissions;
-        document.getElementById('saveManualBtn').onclick = saveScore;
         document.getElementById('logoutBtn').onclick = () => location.reload();
     </script>
 </body>
