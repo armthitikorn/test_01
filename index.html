@@ -3,43 +3,48 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Evaluation Dashboard - Final Fix</title>
+    <title>Dashboard - 100% Audio Fixed</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; color: #34495e; }
         #loginPage { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); }
         .main-content { display: none; padding: 20px; }
         .table-container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1050; justify-content: center; align-items: center; }
+        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1050; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 95%; max-width: 950px; max-height: 90vh; overflow-y: auto; }
-        .audio-step-card { border-left: 5px solid #3498db; background: #f8f9fa; padding: 12px; margin-bottom: 12px; border-radius: 8px; }
+        .audio-step-card { border-left: 5px solid #2ecc71; background: #ffffff; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        code { background: #f1f1f1; padding: 2px 6px; border-radius: 4px; color: #e83e8c; word-break: break-all; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
     <div id="loginPage">
         <div class="card shadow-lg p-4" style="width: 380px; border-radius: 15px;">
-            <h3 class="text-center mb-4 fw-bold">Dashboard Login</h3>
+            <h3 class="text-center mb-4 fw-bold">Admin Dashboard</h3>
             <input type="password" id="adminPass" class="form-control mb-3" placeholder="ระบุรหัสผ่าน">
             <button id="loginBtn" class="btn btn-primary w-100 fw-bold">เข้าสู่ระบบ</button>
         </div>
     </div>
 
     <div id="mainContent" class="main-content container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold text-primary">📊 Simulator Evaluation Dashboard</h2>
-            <button id="logoutBtn" class="btn btn-danger btn-sm">ออกจากระบบ</button>
+        <div class="d-flex justify-content-between align-items-center mb-4 text-white p-3 rounded" style="background: #2c3e50;">
+            <h2 class="mb-0 fs-4 fw-bold"><i class="bi bi-person-badge"></i> ระบบประเมินผล Simulator</h2>
+            <button id="logoutBtn" class="btn btn-outline-light btn-sm">ออกจากระบบ</button>
         </div>
-        <div class="table-container shadow-sm border">
+
+        <div class="table-container shadow-sm">
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>ชื่อพนักงาน</th>
-                            <th>สังกัด</th>
+                            <th>พนักงาน</th>
+                            <th>กลุ่มงาน</th>
                             <th>ประเภทประกัน</th>
+                            <th>สถานะ</th>
                             <th>การจัดการ</th>
                         </tr>
                     </thead>
@@ -50,24 +55,34 @@
     </div>
 
     <div id="scoringModal" class="scoring-modal">
-        <div class="modal-content shadow-lg border-0">
+        <div class="modal-content border-0 shadow-lg">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold">ประเมินผล: <span id="modalTraineeName" class="text-primary"></span></h4>
-                <button class="btn-close" onclick="closeModal()"></button>
+                <h4 class="fw-bold mb-0">ประเมินผล: <span id="modalTraineeName" class="text-primary"></span></h4>
+                <button class="btn-close" onclick="document.getElementById('scoringModal').style.display='none'"></button>
             </div>
+            
             <div class="row">
-                <div class="col-md-6 border-end">
-                    <h6 class="fw-bold mb-3">📁 ไฟล์เสียงใน Folder S1 - S5</h6>
-                    <div id="audioPlaylist" style="max-height: 500px; overflow-y: auto;"></div>
+                <div class="col-md-5 border-end">
+                    <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-mic-fill text-danger"></i> ไฟล์เสียงที่พบในโฟลเดอร์ย่อย</h6>
+                    <div id="audioPlaylist" style="max-height: 550px; overflow-y: auto; padding-right: 10px;">
+                        </div>
                 </div>
-                <div class="col-md-6 ps-4">
-                    <h6 class="fw-bold mb-3">📝 ให้คะแนนประเมิน</h6>
+
+                <div class="col-md-7 ps-4">
+                    <h6 class="fw-bold mb-3 text-secondary">บันทึกคะแนนประเมิน</h6>
                     <div class="row g-2">
-                        <div class="col-6"><label class="small">Step 1</label><input type="number" id="s1" class="form-control score-input"></div>
-                        <div class="col-6"><label class="small">Step 2</label><input type="number" id="s2" class="form-control score-input"></div>
-                        <div class="col-12"><label class="small">ข้อเสนอแนะ</label><textarea id="feedback" class="form-control" rows="3"></textarea></div>
+                        <div class="col-4"><label class="small">S1</label><input type="number" id="s1" class="form-control score-input" max="5"></div>
+                        <div class="col-4"><label class="small">S1.5</label><input type="number" id="s1_5" class="form-control score-input" max="5"></div>
+                        <div class="col-4"><label class="small">S2</label><input type="number" id="s2" class="form-control score-input" max="5"></div>
+                        <div class="col-4"><label class="small">S3</label><input type="number" id="s3" class="form-control score-input" max="5"></div>
+                        <div class="col-4"><label class="small">S4</label><input type="number" id="s4" class="form-control score-input" max="5"></div>
+                        <div class="col-4"><label class="small">S5</label><input type="number" id="s5" class="form-control score-input" max="5"></div>
+                        <div class="col-12 mt-2"><label class="small">ข้อเสนอแนะเพิ่มเติม</label><textarea id="feedback" class="form-control" rows="3"></textarea></div>
                     </div>
-                    <button id="saveScoreBtn" class="btn btn-success w-100 mt-4 fw-bold shadow">บันทึกคะแนน</button>
+                    <div class="bg-success text-white p-3 rounded mt-4 text-center">
+                        <h4 class="mb-0 fw-bold">คะแนนรวม: <span id="totalScoreText">0</span> / 30</h4>
+                    </div>
+                    <button id="saveScoreBtn" class="btn btn-primary w-100 mt-4 btn-lg fw-bold shadow">บันทึกผลการประเมิน</button>
                 </div>
             </div>
         </div>
@@ -76,6 +91,7 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+        // --- Config Supabase ---
         const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -90,6 +106,7 @@
             } else { alert('รหัสผ่านไม่ถูกต้อง'); }
         };
 
+        // 1. ดึงรายชื่อพนักงาน
         async function fetchSubmissions() {
             const { data, error } = await supabase.from('submissions').select('*').order('created_at', { ascending: false });
             if(error) return;
@@ -106,70 +123,93 @@
                 const uid = item.user_id || item.userid;
                 tbody.innerHTML += `
                     <tr>
-                        <td class="fw-bold">${item.name}</td>
+                        <td class="fw-bold text-dark">${item.name}</td>
                         <td>${item.user_group || '-'}</td>
                         <td>${item.insurance_type || '-'}</td>
-                        <td><button class="btn btn-sm btn-primary fw-bold" onclick="scanStorageAndOpen('${uid}', '${item.name}')">เปิดประเมิน</button></td>
+                        <td><span class="badge ${item.manual_score ? 'bg-success' : 'bg-warning text-dark'}">${item.manual_score || 'รอตรวจ'}</span></td>
+                        <td><button class="btn btn-sm btn-primary px-3 fw-bold" onclick="window.scanDeepStorage('${uid}', '${item.name}')">เปิดประเมิน</button></td>
                     </tr>`;
             });
         }
 
-        // ฟังก์ชันล้างตัวเล่นเสียงเพื่อป้องกัน Error WebMediaPlayer
-        window.closeModal = () => {
-            const playlist = document.getElementById('audioPlaylist');
-            playlist.querySelectorAll('audio').forEach(audio => {
-                audio.pause();
-                audio.src = "";
-                audio.load();
-                audio.remove();
-            });
-            playlist.innerHTML = "";
-            document.getElementById('scoringModal').style.display = 'none';
-        };
-
-        window.scanStorageAndOpen = async (userId, name) => {
-            // ล้างข้อมูลเก่าก่อนเริ่มสแกนใหม่เสมอ (ป้องกัน Media Player เต็ม)
-            const playlist = document.getElementById('audioPlaylist');
-            playlist.innerHTML = '<div class="text-center p-3">กำลังมุดเข้า Folder S1-S5...</div>';
-            
+        // 2. ฟังก์ชัน "มุดโฟลเดอร์ย่อย" และ "สร้าง URL แบบ Manual" ตามลิงก์ที่คุณให้มา
+        window.scanDeepStorage = async (userId, name) => {
             activeUserId = userId;
             document.getElementById('modalTraineeName').textContent = name;
             document.getElementById('scoringModal').style.display = 'flex';
+            
+            const playlist = document.getElementById('audioPlaylist');
+            playlist.innerHTML = `<div class="p-3 border rounded bg-light mb-3">
+                <small class="text-muted">ID พนักงาน:</small><br>
+                <code>${userId}</code>
+                <div id="loader" class="mt-2 small text-primary"><div class="spinner-border spinner-border-sm"></div> กำลังมุดหาไฟล์ S1-S5...</div>
+            </div>`;
 
+            // รายการโฟลเดอร์ย่อย S1 ถึง S5 ตามโครงสร้างของคุณ
             const subFolders = ['S1', 'S1.5', 'S2', 'S3', 'S4', 'S5'];
-            let found = false;
-            const tempDiv = document.createElement('div');
+            let foundCount = 0;
 
-            for (const folder of subFolders) {
-                const fullPath = `${userId}/${folder}`;
-                const { data: files, error } = await supabase.storage.from('responses').list(fullPath);
+            for (const stepFolder of subFolders) {
+                const folderPath = `${userId}/${stepFolder}`;
+                
+                // สั่ง List ไฟล์ในโฟลเดอร์ย่อย
+                const { data: files, error } = await supabase.storage.from('responses').list(folderPath);
 
                 if (!error && files && files.length > 0) {
                     files.forEach(file => {
                         if (file.name.includes('.empty')) return;
-                        found = true;
-                        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${fullPath}/${file.name}`);
+                        foundCount++;
 
-                        tempDiv.innerHTML += `
-                            <div class="audio-step-card shadow-sm border">
-                                <div class="small fw-bold text-primary mb-2">📍 Folder: ${folder} | ไฟล์: ${file.name}</div>
-                                <audio controls class="w-100" style="height: 35px;">
-                                    <source src="${publicUrl}" type="audio/webm">
+                        // --- จุดสำคัญ: สร้างลิงก์แบบ Manual ตามโครงสร้างที่คุณยืนยันว่าใช้ได้ ---
+                        const fileUrl = `${supabaseUrl}/storage/v1/object/public/responses/${userId}/${stepFolder}/${file.name}`;
+
+                        playlist.innerHTML += `
+                            <div class="audio-step-card">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-primary">ขั้นตอน ${stepFolder}</span>
+                                    <small class="text-muted" style="font-size:10px;">${file.name.substring(0,8)}...</small>
+                                </div>
+                                <audio controls class="w-100" style="height:35px;" preload="metadata">
+                                    <source src="${fileUrl}" type="audio/webm">
+                                    <source src="${fileUrl}" type="audio/mpeg">
                                 </audio>
+                                <div class="text-end mt-1">
+                                    <a href="${fileUrl}" target="_blank" class="text-decoration-none" style="font-size:10px;">
+                                        <i class="bi bi-box-arrow-up-right"></i> เปิดลิงก์ตรง
+                                    </a>
+                                </div>
                             </div>`;
                     });
                 }
             }
 
-            playlist.innerHTML = found ? "" : '<div class="alert alert-warning">ไม่พบไฟล์ใน S1-S5</div>';
-            if (found) playlist.appendChild(tempDiv);
+            document.getElementById('loader').innerHTML = foundCount > 0 
+                ? `<span class="text-success">✅ ตรวจพบ ${foundCount} ไฟล์เสียง</span>`
+                : `<span class="text-danger">❌ ไม่พบไฟล์เสียงในห้อง S1-S5</span>`;
         };
 
+        // 3. ระบบรวมคะแนน
+        const updateTotal = () => {
+            const sum = ['s1','s1_5','s2','s3','s4','s5'].reduce((acc, id) => acc + (parseInt(document.getElementById(id).value) || 0), 0);
+            document.getElementById('totalScoreText').textContent = sum;
+        };
+        document.querySelectorAll('.score-input').forEach(i => i.oninput = updateTotal);
+
+        // 4. บันทึกคะแนน
         document.getElementById('saveScoreBtn').onclick = async () => {
+            const score = document.getElementById('totalScoreText').textContent;
             const { error } = await supabase.from('submissions')
-                .update({ manual_score: "ตรวจแล้ว", feedback: document.getElementById('feedback').value })
+                .update({ 
+                    manual_score: score, 
+                    feedback: document.getElementById('feedback').value 
+                })
                 .match({ user_id: activeUserId });
-            if(!error) { alert("บันทึกสำเร็จ"); fetchSubmissions(); closeModal(); }
+            
+            if(!error) { 
+                alert("บันทึกคะแนนสำเร็จ"); 
+                fetchSubmissions(); 
+                document.getElementById('scoringModal').style.display='none'; 
+            }
         };
 
         document.getElementById('logoutBtn').onclick = () => location.reload();
