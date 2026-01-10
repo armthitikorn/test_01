@@ -1,0 +1,60 @@
+<script type="module">
+    // ... (ส่วน Import และ Config คงเดิม) ...
+
+    const uploadAll = async () => {
+        document.getElementById('loadingOverlay').style.display = "flex";
+        document.getElementById('loadingText').textContent = "กำลังอัปโหลดไฟล์และสร้างสรุปผล...";
+        
+        let success = 0;
+        const diff = document.querySelector('input[name="difficulty"]:checked').value;
+        const totalSteps = allRecordings.length;
+
+        for (let i = 0; i < allRecordings.length; i++) {
+            const rec = allRecordings[i];
+            const fileName = `${currentUserId}/S${rec.part}/${uuidv4()}.webm`;
+            const { error: upErr } = await window.supabase.storage.from('responses').upload(fileName, rec.audioBlob);
+            
+            if(!upErr) {
+                const { data: { publicUrl } } = window.supabase.storage.from('responses').getPublicUrl(fileName);
+                
+                // บันทึกแยกราย Turn (เหมือนเดิม) แต่เพิ่ม customer_audio_url และ Diff tag
+                await window.supabase.from('submissions').insert([{
+                    user_id: currentUserId, 
+                    name: document.getElementById("inputUserName").value, 
+                    part_number: rec.part, 
+                    question_number: rec.qNum, 
+                    question_text: `${rec.qText} (Diff: ${diff})`, // เพิ่ม Tag เพื่อให้ Dashboard กรองได้
+                    audio_url: publicUrl,
+                    customer_audio_url: rec.customerAudioUrl, // เพิ่มการบันทึกเสียงลูกค้า
+                    insurance_type: selectedProductType, 
+                    user_group: document.getElementById("inputUserGroup").value
+                }]);
+                success++;
+            }
+        }
+
+        // --- ส่วนที่เพิ่ม: สร้าง "แถวหลัก" สำหรับให้ Supervisor ประเมิน (Summary Row) ---
+        if (success > 0) {
+            await window.supabase.from('submissions').insert([{
+                user_id: currentUserId,
+                name: document.getElementById("inputUserName").value,
+                part_number: 0, // 0 หมายถึงแถวสรุปผลหลัก
+                question_text: `⭐ ผลการทำแบบทดสอบรวม (Diff: ${diff})`,
+                insurance_type: selectedProductType,
+                user_group: document.getElementById("inputUserGroup").value,
+                manual_score: null // รอการประเมิน
+            }]);
+        }
+
+        document.getElementById('loadingOverlay').style.display = "none";
+        
+        if(success === allRecordings.length) { 
+            document.getElementById("finalSaveBtn").textContent = "✅ เรียบร้อย"; 
+            document.getElementById('certificate').style.display = 'block';
+            document.getElementById('traineeName').textContent = document.getElementById("inputUserName").value;
+            document.getElementById('issueDate').textContent = new Date().toLocaleDateString('th-TH');
+            document.getElementById("certificate").scrollIntoView();
+        } else { alert("Upload incomplete"); document.getElementById("finalSaveBtn").disabled = false; }
+    }
+    // ... (ส่วนอื่นๆ คงเดิมทั้งหมด) ...
+</script>
