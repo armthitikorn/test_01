@@ -70,8 +70,6 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -152,23 +150,25 @@
             <h2>ยินดีด้วย!</h2>
             <p style="font-size: 20px;">คุณ <strong><span id="traineeName"></span></strong></p>
             <p>ได้ทำการทดสอบ Sales E-Simulator เสร็จสิ้น</p>
-            <div style="margin: 20px 0; font-style: italic;">"ทักษะการขายคือหัวใจของความสำเร็จ"</div>
             <p>วันที่ทดสอบ: <span id="issueDate"></span></p>
             <button id="certBtn" style="background:#d9534f;">ดูใบประกาศ</button>
         </div>
     </div>
 
     <script type="module">
-        // --- 1. Supabase Config (ใช้ค่าเดิมของคุณ) ---
-        const supabaseUrl = 'https://YOUR_PROJECT_URL.supabase.co';
-        const supabaseKey = 'YOUR_ANON_KEY';
-        window.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        import { v4 as uuidv4 } from 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/esm-browser/index.js';
 
-        // --- 2. Variables ---
+        // --- Config Supabase ---
+        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // --- Variables (Logic เดิมของคุณ) ---
         let mediaRecorder;
         let audioChunks = [];
         let allRecordings = [];
-        let currentUserId = "";
+        let currentUserId = uuidv4(); // ใช้ UUID เพื่อให้ตรงกับ Dashboard
         let selectedProductType = "";
         let scenarioRound = 1;
         let currentCustomerAudioUrl = "";
@@ -181,15 +181,10 @@
             "ถ้าลดหย่อนภาษีได้กี่บาทครับ?"
         ];
 
-        // --- 3. Functions ---
-        const uuidv4 = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-
+        // --- Functions เริ่มต้น ---
         const startTest = () => {
             const name = document.getElementById("inputUserName").value;
-            const group = document.getElementById("inputUserGroup").value;
-            if(!name || !group) return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-            
-            currentUserId = `user_${Date.now()}`;
+            if(!name) return alert("กรุณากรอกชื่อก่อนเริ่ม");
             selectedProductType = document.getElementById("productType").value;
             document.getElementById("setup").style.display = "none";
             document.getElementById("section1").style.display = "block";
@@ -202,14 +197,13 @@
                 document.getElementById("nextRoundBtn").style.display = "none";
                 document.getElementById("recordBtn").style.display = "inline-block";
                 document.getElementById("s1_status").innerHTML = "";
-                // จำลอง URL ไฟล์เสียงลูกค้า (ในงานจริงควรดึงจาก Storage)
-                currentCustomerAudioUrl = `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3`; 
             } else {
                 document.getElementById("recordBtn").style.display = "none";
                 document.getElementById("nextSection2Btn").style.display = "inline-block";
             }
         };
 
+        // --- บันทึกเสียง (Logic เดิม) ---
         const toggleRecording = async (step) => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
@@ -219,171 +213,111 @@
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            
             mediaRecorder.onstop = () => {
                 const blob = new Blob(audioChunks, { type: 'audio/webm' });
                 handleStopRecording(step, blob);
             };
-            
             mediaRecorder.start();
             updateUIStatus(step, true);
         };
 
         const updateUIStatus = (step, isRecording) => {
-            const statusId = `s${step}_status`;
-            const btnId = step === 1 ? "recordBtn" : (step === 8 ? "pitchRecordBtn" : (step === 2 ? "answerBtn" : (step === 3 ? "closeBtn" : (step === 4 ? "replyBtn" : (step === 5 ? "answerHBtn" : "answerABtn")))));
-            const btn = document.getElementById(btnId);
+            const statusMap = {1:"s1_status", 8:"s2_status", 2:"s3_status", 3:"s3_status", 4:"s3_status", 5:"s4_status", 6:"s5_status"};
+            const statusId = statusMap[step];
             if(isRecording) {
                 document.getElementById(statusId).innerHTML = '<p class="status-recording">🔴 กำลังบันทึกเสียง...</p>';
-                btn.textContent = "⏹️ กดเพื่อหยุดพูด";
-                btn.classList.add("btn-stop");
             } else {
                 document.getElementById(statusId).innerHTML = '<p style="color:green;">✅ บันทึกสำเร็จ</p>';
-                btn.textContent = "🎤 บันทึกใหม่";
-                btn.classList.remove("btn-stop");
             }
         };
 
         const handleStopRecording = (step, blob) => {
-            const diff = document.querySelector('input[name="difficulty"]:checked').value;
-            let qText = "";
-            let part = 0;
-
+            let part = 0; let qText = "";
             if(step === 1) { part = 1; qText = questions[scenarioRound-1]; }
-            else if(step === 8) { part = 2; qText = "Pitching Product Content"; }
+            else if(step === 8) { part = 2; qText = "Pitching Product"; }
             else if(step === 2) { part = 3; qText = "Objection Handling"; }
-            else if(step === 3) { part = 3; qText = "Closing Sale Immediately"; }
-            else if(step === 4) { part = 3; qText = "Additional Reply"; }
-            else if(step === 5) { part = 4; qText = "Hard Objection: Premium"; }
-            else if(step === 6) { part = 5; qText = "Final Closing Summary"; }
+            else if(step === 3) { part = 3; qText = "Close Immediately"; }
+            else if(step === 4) { part = 3; qText = "More Reply"; }
+            else if(step === 5) { part = 4; qText = "Hard Objection"; }
+            else if(step === 6) { part = 5; qText = "Final Closing"; }
 
-            allRecordings.push({
-                part: part,
-                qNum: scenarioRound,
-                qText: qText,
-                audioBlob: blob,
-                customerAudioUrl: currentCustomerAudioUrl
-            });
-
+            allRecordings.push({ part: part, qNum: scenarioRound, qText: qText, audioBlob: blob });
             updateUIStatus(step, false);
-            if(step === 1) {
-                scenarioRound++;
-                document.getElementById("nextRoundBtn").style.display = "inline-block";
-            } else if(step === 8) document.getElementById("nextSection3Btn").style.display = "inline-block";
+
+            if(step === 1) { scenarioRound++; document.getElementById("nextRoundBtn").style.display = "inline-block"; }
+            else if(step === 8) document.getElementById("nextSection3Btn").style.display = "inline-block";
             else if(step === 2 || step === 3 || step === 4) document.getElementById("nextSection4Btn").style.display = "inline-block";
             else if(step === 5) document.getElementById("nextSection5Btn").style.display = "inline-block";
             else if(step === 6) document.getElementById("finalSaveBtn").style.display = "inline-block";
         };
 
-        // --- ส่วนสำคัญ: ฟังก์ชันการ Upload ที่เชื่อมโยงกับ Dashboard ---
+        // --- ส่วน Upload ที่แก้ไขใหม่เพื่อเชื่อมต่อ Index 3 ---
         const uploadAll = async () => {
             document.getElementById('loadingOverlay').style.display = "flex";
-            document.getElementById('loadingText').textContent = "กำลังอัปโหลดและเชื่อมโยง Dashboard...";
-            
-            let successCount = 0;
             const diff = document.querySelector('input[name="difficulty"]:checked').value;
             const userName = document.getElementById("inputUserName").value;
             const userGroup = document.getElementById("inputUserGroup").value;
 
             for (let i = 0; i < allRecordings.length; i++) {
                 const rec = allRecordings[i];
-                const fileName = `${currentUserId}/S${rec.part}_Q${i}_${uuidv4()}.webm`;
-                
-                // 1. Upload File to Storage
-                const { error: upErr } = await window.supabase.storage.from('responses').upload(fileName, rec.audioBlob);
+                const fileName = `${currentUserId}/part${rec.part}_${uuidv4()}.webm`;
+                const { error: upErr } = await supabase.storage.from('responses').upload(fileName, rec.audioBlob);
                 
                 if(!upErr) {
-                    const { data: { publicUrl } } = window.supabase.storage.from('responses').getPublicUrl(fileName);
-                    
-                    // 2. Insert Data to Table (เพิ่ม Customer Audio และ Diff Tag)
-                    await window.supabase.from('submissions').insert([{
+                    const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(fileName);
+                    await supabase.from('submissions').insert([{
                         user_id: currentUserId, 
+                        userid: currentUserId, // ใส่ทั้งสองคอลัมน์ตามความต้องการ
                         name: userName, 
-                        part_number: rec.part, 
-                        question_number: rec.qNum, 
-                        question_text: `${rec.qText} (${diff})`, 
+                        part_number: rec.part,
+                        question_text: `${rec.qText} (${diff})`,
                         audio_url: publicUrl,
-                        customer_audio_url: rec.customerAudioUrl,
-                        insurance_type: selectedProductType, 
+                        insurance_type: selectedProductType,
                         user_group: userGroup
                     }]);
-                    successCount++;
                 }
             }
 
-            // 3. สร้าง "แถวสรุปผล" (Summary Row) เพื่อให้ Dashboard ประเมินง่ายๆ
-            if (successCount > 0) {
-                await window.supabase.from('submissions').insert([{
-                    user_id: currentUserId,
-                    name: userName,
-                    part_number: 0, // เลข 0 คือตัวแทนของแถวสรุปผลหลัก
-                    question_text: `⭐ ผลการทำแบบทดสอบรวม (${diff})`,
-                    insurance_type: selectedProductType,
-                    user_group: userGroup,
-                    manual_score: null 
-                }]);
-            }
+            // สร้าง Summary Row สำหรับ Dashboard
+            await supabase.from('submissions').insert([{
+                user_id: currentUserId,
+                userid: currentUserId,
+                name: userName,
+                part_number: 0,
+                question_text: `⭐ ผลการทำแบบทดสอบรวม (${diff})`,
+                insurance_type: selectedProductType,
+                user_group: userGroup
+            }]);
 
             document.getElementById('loadingOverlay').style.display = "none";
-            
-            if(successCount > 0) { 
-                document.getElementById("finalSaveBtn").textContent = "✅ ส่งข้อมูลเรียบร้อย"; 
-                document.getElementById("finalSaveBtn").disabled = true;
-                document.getElementById('certificate').style.display = 'block';
-                document.getElementById('traineeName').textContent = userName;
-                document.getElementById('issueDate').textContent = new Date().toLocaleDateString('th-TH');
-                document.getElementById("certificate").scrollIntoView({behavior: "smooth"});
-            } else {
-                alert("เกิดข้อผิดพลาดในการอัปโหลด โปรดลองอีกครั้ง");
-            }
+            document.getElementById('certificate').style.display = 'block';
+            document.getElementById('traineeName').textContent = userName;
+            document.getElementById('issueDate').textContent = new Date().toLocaleDateString('th-TH');
         };
 
-        // --- ส่วนควบคุม Navigation หน้าจอ ---
-        const initSection2 = () => { 
-            document.getElementById("section1").style.display="none"; 
-            document.getElementById("section2").style.display="block"; 
-        };
-        const initSection3 = () => { 
-            document.getElementById("section2").style.display="none"; 
-            document.getElementById("section3").style.display="block"; 
-        };
-        const playS2 = () => {
-            document.getElementById("s3_status").innerHTML = "🔈 กำลังฟังคำถามจากลูกค้า...";
-            setTimeout(() => {
-                document.getElementById("s3_status").innerHTML = "✅ ฟังจบแล้ว โปรดเลือกวิธีตอบ";
-                document.getElementById("answerBtn").style.display = "inline-block";
-                document.getElementById("closeBtn").style.display = "inline-block";
-                document.getElementById("replyBtn").style.display = "inline-block";
-            }, 2000);
-        };
-        const initSection4 = () => { 
-            document.getElementById("section3").style.display="none"; 
-            document.getElementById("section4").style.display="block"; 
-        };
-        const initSection5 = () => { 
-            document.getElementById("section4").style.display="none"; 
-            document.getElementById("section5").style.display="block"; 
-        };
+        // --- ส่วนควบคุมหน้าจอ (Navigation เดิมของคุณ) ---
+        const initSection2 = () => { document.getElementById("section1").style.display="none"; document.getElementById("section2").style.display="block"; };
+        const initSection3 = () => { document.getElementById("section2").style.display="none"; document.getElementById("section3").style.display="block"; };
+        const playS2 = () => { document.getElementById("s3_status").innerHTML = "🔈 กำลังฟัง..."; setTimeout(() => { document.getElementById("s3_status").innerHTML = "✅ ฟังจบแล้ว"; document.getElementById("answerBtn").style.display = "inline-block"; document.getElementById("closeBtn").style.display = "inline-block"; document.getElementById("replyBtn").style.display = "inline-block"; }, 2000); };
+        const initSection4 = () => { document.getElementById("section3").style.display="none"; document.getElementById("section4").style.display="block"; };
+        const initSection5 = () => { document.getElementById("section4").style.display="none"; document.getElementById("section5").style.display="block"; };
 
-        const init = async () => {
-            document.getElementById("startTestBtn").onclick = startTest;
-            document.getElementById("recordBtn").onclick = () => toggleRecording(1);
-            document.getElementById("nextRoundBtn").onclick = initSection1_5;
-            document.getElementById("pitchRecordBtn").onclick = () => toggleRecording(8);
-            document.getElementById("nextSection2Btn").onclick = initSection2;
-            document.getElementById("startQBtn").onclick = playS2;
-            document.getElementById("answerBtn").onclick = () => toggleRecording(2);
-            document.getElementById("closeBtn").onclick = () => toggleRecording(3);
-            document.getElementById("replyBtn").onclick = () => toggleRecording(4);
-            document.getElementById("nextSection3Btn").onclick = initSection3;
-            document.getElementById("nextSection4Btn").onclick = initSection4;
-            document.getElementById("answerHBtn").onclick = () => toggleRecording(5);
-            document.getElementById("nextSection5Btn").onclick = initSection5;
-            document.getElementById("answerABtn").onclick = () => toggleRecording(6);
-            document.getElementById("finalSaveBtn").onclick = uploadAll;
-        };
-
-        document.addEventListener('DOMContentLoaded', init);
+        // ผูกปุ่มทั้งหมด
+        document.getElementById("startTestBtn").onclick = startTest;
+        document.getElementById("recordBtn").onclick = () => toggleRecording(1);
+        document.getElementById("nextRoundBtn").onclick = initSection1_5;
+        document.getElementById("pitchRecordBtn").onclick = () => toggleRecording(8);
+        document.getElementById("nextSection2Btn").onclick = initSection2;
+        document.getElementById("startQBtn").onclick = playS2;
+        document.getElementById("answerBtn").onclick = () => toggleRecording(2);
+        document.getElementById("closeBtn").onclick = () => toggleRecording(3);
+        document.getElementById("replyBtn").onclick = () => toggleRecording(4);
+        document.getElementById("nextSection3Btn").onclick = initSection3;
+        document.getElementById("nextSection4Btn").onclick = initSection4;
+        document.getElementById("answerHBtn").onclick = () => toggleRecording(5);
+        document.getElementById("nextSection5Btn").onclick = initSection5;
+        document.getElementById("answerABtn").onclick = () => toggleRecording(6);
+        document.getElementById("finalSaveBtn").onclick = uploadAll;
     </script>
 </body>
 </html>
