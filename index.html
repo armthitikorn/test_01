@@ -210,168 +210,164 @@
         </div>
     </div>
 
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+<script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        // --- Supabase Connection ---
-        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+    // --- Supabase Connection ---
+    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-        let masterData = [];
-        let currentUserId = null;
+    let masterData = [];
+    let currentUserId = null;
 
-        // Login System
-        document.getElementById('loginBtn').onclick = () => {
-            if (document.getElementById('adminPass').value === "12345678") {
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                loadData();
-            } else { alert('รหัสผ่านไม่ถูกต้อง'); }
-        };
+    // Login System
+    document.getElementById('loginBtn').onclick = () => {
+        if (document.getElementById('adminPass').value === "12345678") {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            loadData();
+        } else { alert('รหัสผ่านไม่ถูกต้อง'); }
+    };
 
-        // 1. โหลดข้อมูลจากตาราง submissions (ฉบับอัปเกรดหลัง Migration)
-        async function loadData() {
-            let query = supabase.from('submissions').select('*').order('created_at', { ascending: false });
+    // 1. โหลดข้อมูลจากตาราง submissions
+    async function loadData() {
+        let query = supabase.from('submissions').select('*').order('created_at', { ascending: false });
 
-            // ดึงค่าจากตัวกรอง
-            const start = document.getElementById('filterStart').value;
-            const end = document.getElementById('filterEnd').value;
-            const dept = document.getElementById('filterDept').value;
-            const level = document.getElementById('filterLevel').value;
+        const start = document.getElementById('filterStart').value;
+        const end = document.getElementById('filterEnd').value;
+        const dept = document.getElementById('filterDept').value;
+        const level = document.getElementById('filterLevel').value;
 
-            if (start) query = query.gte('created_at', start);
-            if (end) query = query.lte('created_at', end + 'T23:59:59');
-            if (dept) query = query.eq('user_group', dept);
-            if (level) query = query.eq('staff_level', level);
+        if (start) query = query.gte('created_at', start);
+        if (end) query = query.lte('created_at', end + 'T23:59:59');
+        if (dept) query = query.eq('user_group', dept);
+        if (level) query = query.eq('staff_level', level);
 
-            const { data, error } = await query;
-            if (error) { console.error(error); return; }
+        const { data, error } = await query;
+        if (error) { console.error(error); return; }
 
-            masterData = data;
-            updateDashboard(data);
-        }
+        masterData = data;
+        updateDashboard(data);
+    }
 
-        // 2. แสดงผลข้อมูลและ KPI
-        function updateDashboard(data) {
-            // KPI Update
-            document.getElementById('kpiTotal').innerText = data.length;
-            const done = data.filter(i => i.manual_score).length;
-            document.getElementById('kpiDone').innerText = done;
-            document.getElementById('kpiPending').innerText = data.length - done;
-            
-            const totalScore = data.reduce((acc, curr) => acc + (parseFloat(curr.manual_score) || 0), 0);
-            document.getElementById('kpiAvg').innerText = done > 0 ? (totalScore / done).toFixed(1) : "0.0";
-
-            // Render Table
-            const tbody = document.getElementById('dataTableBody');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const statusBadge = item.manual_score 
-                    ? `<span class="badge-status bg-success-subtle text-success"><i class="bi bi-check-circle-fill me-1"></i> ตรวจแล้ว: ${item.manual_score}</span>`
-                    : `<span class="badge-status bg-warning-subtle text-warning"><i class="bi bi-hourglass-split me-1"></i> รอประเมิน</span>`;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><div class="fw-bold">${item.name}</div><small class="text-muted">${item.user_id}</small></td>
-                        <td><span class="badge-status bg-light text-dark border">${item.user_group || '-'}</span></td>
-                        <td><span class="badge-status bg-info-subtle text-info">${item.staff_level || '-'}</span></td>
-                        <td class="small">${new Date(item.created_at).toLocaleString('th-TH')}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <button class="btn btn-dark btn-sm rounded-pill px-3 fw-bold" onclick="window.openEval('${item.id}')">
-                                <i class="bi bi-pencil-square"></i> ประเมิน
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-// แก้ไขบรรทัดที่ประมาณ 305-315
-window.openEval = (id) => {
-    const row = masterData.find(i => i.id == id);
-    currentUserId = row.user_id;
-    
-    document.getElementById('mName').innerText = row.name;
-    document.getElementById('mID').innerText = row.user_id;
-    document.getElementById('mFeedback').value = row.feedback || "";
-    document.getElementById('scoringModal').style.display = 'flex';
-
-    const container = document.getElementById('mAudioContainer');
-    container.innerHTML = '';
-    
-    // รายการไฟล์เสียง (แก้ไขจุด url: ซ้ำแล้ว)
-    const steps = [
-        { lab: 'S1', url: row.s1_audio_url },
-        { lab: 'S1.5', url: row.s1_5_audio_url },
-        { lab: 'S2', url: row.s2_audio_url },
-        { lab: 'S3', url: row.s3_audio_url },
-        { lab: 'S4', url: row.s4_audio_url }, // แก้ไขตรงนี้ให้เหลือ url: อันเดียว
-        { lab: 'S5', url: row.s5_audio_url }
-    ];
-
-    steps.forEach(s => {
-        if (s.url) {
-            container.innerHTML += `
-                <div class="audio-player-card">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="badge bg-primary rounded-pill">ขั้นตอน ${s.lab}</span>
-                        <a href="${s.url}" target="_blank" class="small text-decoration-none">ลิงก์ตรง <i class="bi bi-box-arrow-up-right"></i></a>
-                    </div>
-                    <audio controls class="w-100"><source src="${s.url}" type="audio/webm"></audio>
-                </div>`;
-        }
-    });
-
-    if (container.innerHTML === '') container.innerHTML = '<div class="alert alert-warning">ไม่พบไฟล์เสียงในตาราง</div>';
-};
-
-        // 4. บันทึกผลประเมินลง Supabase
-        document.getElementById('btnSaveEval').onclick = async () => {
-            const sc = ['sc1','sc1_5','sc2','sc3','sc4','sc5'].map(id => parseInt(document.getElementById(id).value) || 0);
-            const total = sc.reduce((a, b) => a + b, 0);
-
-            const { error } = await supabase.from('submissions')
-                .update({
-                    manual_score: total.toString(),
-                    feedback: document.getElementById('mFeedback').value,
-                    s1_score: sc[0], s1_5_score: sc[1], s2_score: sc[2],
-                    s3_score: sc[3], s4_score: sc[4], s5_score: sc[5]
-                })
-                .match({ user_id: currentUserId });
-
-            if (!error) {
-                alert("บันทึกคะแนนสำเร็จ!");
-                document.getElementById('scoringModal').style.display = 'none';
-                loadData();
-            } else { alert("Error: " + error.message); }
-        };
-
-        // Export CSV
-        document.getElementById('exportCsvBtn').onclick = () => {
-            let csv = "\uFEFFลำดับ,ชื่อ-นามสกุล,แผนก,ระดับ,คะแนนรวม,ความคิดเห็น\n";
-            masterData.forEach((r, idx) => {
-                csv += `${idx+1},${r.name},${r.user_group},${r.staff_level},${r.manual_score || 0},${r.feedback || '-'}\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `Report_Simulator_${new Date().toLocaleDateString()}.csv`;
-            link.click();
-        };
-
-        // Events
-        document.getElementById('btnSearch').onclick = loadData;
-        document.getElementById('logoutBtn').onclick = () => location.reload();
+    // 2. แสดงผลข้อมูลและ KPI
+    function updateDashboard(data) {
+        document.getElementById('kpiTotal').innerText = data.length;
+        const done = data.filter(i => i.manual_score).length;
+        document.getElementById('kpiDone').innerText = done;
+        document.getElementById('kpiPending').innerText = data.length - done;
         
-        // Auto-Sum
-        document.querySelectorAll('.form-control[type="number"]').forEach(el => {
-            el.oninput = () => {
-                const sum = ['sc1','sc1_5','sc2','sc3','sc4','sc5'].reduce((a, b) => a + (parseInt(document.getElementById(b).value) || 0), 0);
-                document.getElementById('totalDisplay').innerText = sum;
-            };
+        const totalScore = data.reduce((acc, curr) => acc + (parseFloat(curr.manual_score) || 0), 0);
+        document.getElementById('kpiAvg').innerText = done > 0 ? (totalScore / done).toFixed(1) : "0.0";
+
+        const tbody = document.getElementById('dataTableBody');
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+            const statusBadge = item.manual_score 
+                ? `<span class="badge-status bg-success-subtle text-success"><i class="bi bi-check-circle-fill me-1"></i> ตรวจแล้ว: ${item.manual_score}</span>`
+                : `<span class="badge-status bg-warning-subtle text-warning"><i class="bi bi-hourglass-split me-1"></i> รอประเมิน</span>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><div class="fw-bold">${item.name}</div><small class="text-muted">${item.user_id}</small></td>
+                    <td><span class="badge-status bg-light text-dark border">${item.user_group || '-'}</span></td>
+                    <td><span class="badge-status bg-info-subtle text-info">${item.staff_level || '-'}</span></td>
+                    <td class="small">${new Date(item.created_at).toLocaleString('th-TH')}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-dark btn-sm rounded-pill px-3 fw-bold" onclick="window.openEval('${item.id}')">
+                            <i class="bi bi-pencil-square"></i> ประเมิน
+                        </button>
+                    </td>
+                </tr>`;
         });
-    </script>
+    }
+
+    // 3. เปิด Modal ประเมิน (แก้ไขจุด Syntax Error แล้ว)
+    window.openEval = (id) => {
+        const row = masterData.find(i => i.id == id);
+        currentUserId = row.user_id;
+        
+        document.getElementById('mName').innerText = row.name;
+        document.getElementById('mID').innerText = row.user_id;
+        document.getElementById('mFeedback').value = row.feedback || "";
+        document.getElementById('scoringModal').style.display = 'flex';
+
+        const container = document.getElementById('mAudioContainer');
+        container.innerHTML = '';
+        
+        // --- ตรวจสอบจุดนี้: ไม่มี url: ซ้ำซ้อนแล้ว ---
+        const steps = [
+            { lab: 'S1', url: row.s1_audio_url },
+            { lab: 'S1.5', url: row.s1_5_audio_url },
+            { lab: 'S2', url: row.s2_audio_url },
+            { lab: 'S3', url: row.s3_audio_url },
+            { lab: 'S4', url: row.s4_audio_url },
+            { lab: 'S5', url: row.s5_audio_url }
+        ];
+
+        steps.forEach(s => {
+            if (s.url) {
+                container.innerHTML += `
+                    <div class="audio-player-card">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="badge bg-primary rounded-pill">ขั้นตอน ${s.lab}</span>
+                            <a href="${s.url}" target="_blank" class="small text-decoration-none">ลิงก์ตรง <i class="bi bi-box-arrow-up-right"></i></a>
+                        </div>
+                        <audio controls class="w-100" preload="metadata"><source src="${s.url}" type="audio/webm"></audio>
+                    </div>`;
+            }
+        });
+
+        if (container.innerHTML === '') container.innerHTML = '<div class="alert alert-warning">ไม่พบไฟล์เสียงในตาราง</div>';
+    };
+
+    // 4. บันทึกผลประเมิน
+    document.getElementById('btnSaveEval').onclick = async () => {
+        const sc = ['sc1','sc1_5','sc2','sc3','sc4','sc5'].map(id => parseInt(document.getElementById(id).value) || 0);
+        const total = sc.reduce((a, b) => a + b, 0);
+
+        const { error } = await supabase.from('submissions')
+            .update({
+                manual_score: total.toString(),
+                feedback: document.getElementById('mFeedback').value,
+                s1_score: sc[0], s1_5_score: sc[1], s2_score: sc[2],
+                s3_score: sc[3], s4_score: sc[4], s5_score: sc[5]
+            })
+            .match({ user_id: currentUserId });
+
+        if (!error) {
+            alert("บันทึกคะแนนสำเร็จ!");
+            document.getElementById('scoringModal').style.display = 'none';
+            loadData();
+        } else { alert("Error: " + error.message); }
+    };
+
+    // Export CSV
+    document.getElementById('exportCsvBtn').onclick = () => {
+        let csv = "\uFEFFลำดับ,ชื่อ-นามสกุล,แผนก,ระดับ,คะแนนรวม,ความคิดเห็น\n";
+        masterData.forEach((r, idx) => {
+            csv += `${idx+1},${r.name},${r.user_group},${r.staff_level},${r.manual_score || 0},${r.feedback || '-'}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Report_Simulator_${new Date().toLocaleDateString()}.csv`;
+        link.click();
+    };
+
+    document.getElementById('btnSearch').onclick = loadData;
+    document.getElementById('logoutBtn').onclick = () => location.reload();
+    
+    // Auto-Sum
+    document.querySelectorAll('.form-control[type="number"]').forEach(el => {
+        el.oninput = () => {
+            const sum = ['sc1','sc1_5','sc2','sc3','sc4','sc5'].reduce((a, b) => a + (parseInt(document.getElementById(b).value) || 0), 0);
+            document.getElementById('totalDisplay').innerText = sum;
+        };
+    });
+</script>
 </body>
 </html>
