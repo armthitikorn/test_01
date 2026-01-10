@@ -132,57 +132,51 @@
             });
         }
 
-// --- ฟังก์ชันสแกน Storage แบบเน้นความชัวร์ (ใช้แทนของเดิม) ---
 window.scanStorageAndOpen = async (userId, name) => {
     activeUserId = userId;
     document.getElementById('modalTraineeName').textContent = name;
     document.getElementById('scoringModal').style.display = 'flex';
     
     const playlist = document.getElementById('audioPlaylist');
-    // โชว์รหัสที่เรากำลังหา ค้างไว้ก่อนเลย ไม่ต้องรีบลบ
-    playlist.innerHTML = `
-        <div class="alert alert-info">
-            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-            กำลังค้นหาไฟล์ในโฟลเดอร์: <br><b class="text-break">${userId}</b>
-        </div>`;
+    playlist.innerHTML = '<div class="text-center p-3">🔍 กำลังดึงไฟล์จาก Storage...</div>';
 
-    // 1. สั่ง List รายชื่อไฟล์
+    // 1. ลิสต์ไฟล์ (ใช้ userId ที่ได้มาจากตาราง)
     const { data: files, error } = await supabase.storage.from('responses').list(userId, {
         sortBy: { column: 'name', order: 'asc' }
     });
 
-    if (error) {
-        playlist.innerHTML = `<div class="alert alert-danger"><b>Error:</b> ${error.message}</div>`;
+    if (error || !files || files.length === 0) {
+        playlist.innerHTML = `<div class="alert alert-warning text-center">ไม่พบไฟล์เสียงใน Storage<br><small>Path: ${userId}</small></div>`;
         return;
     }
 
-    // 2. ถ้าหาไม่เจอ (เป็นสาเหตุที่มันแว๊บหายไปก่อนหน้านี้)
-    if (!files || files.length === 0 || (files.length === 1 && files[0].name === '.emptyFolderPlaceholder')) {
-        playlist.innerHTML = `
-            <div class="alert alert-warning">
-                <h6 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> หาโฟลเดอร์ไม่เจอ</h6>
-                <p class="small">ระบบหาโฟลเดอร์ชื่อ <code>${userId}</code> ไม่พบใน Storage</p>
-                <hr>
-                <button class="btn btn-sm btn-outline-dark w-100" onclick="window.scanRootFolder('${userId}')">
-                    ลองสแกนหาไฟล์จากหน้าแรก (Root)
-                </button>
-            </div>`;
-        return;
-    }
+    playlist.innerHTML = ''; 
 
-    // 3. ถ้าเจอไฟล์ ให้โชว์ทันที
-    playlist.innerHTML = '<h6 class="mb-3 fw-bold text-success">ตรวจพบ ' + files.length + ' ไฟล์:</h6>';
+    // 2. วนลูปสร้างตัวเล่นเสียง (ใช้ฟังก์ชันของ Supabase โดยตรงเพื่อความชัวร์)
     files.forEach(file => {
         if (file.name === '.emptyFolderPlaceholder') return;
 
+        // --- แก้ไขจุดนี้: ใช้ getPublicUrl ของระบบเพื่อสร้าง URL ที่ถูกต้องตามมาตรฐาน ---
         const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${userId}/${file.name}`);
 
         playlist.innerHTML += `
-            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-primary bg-white rounded">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold text-dark small">${file.name}</span>
+            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-success bg-white rounded">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark small"><i class="bi bi-file-earmark-music"></i> ${file.name}</span>
                 </div>
-                <audio controls src="${publicUrl}" class="w-100" style="height: 35px;"></audio>
+                
+                <audio controls class="w-100" style="height: 35px;" 
+                       onerror="this.parentElement.innerHTML += '<div class='text-danger small'>โหลดไฟล์ไม่ได้: กรุณาเช็ค CORS หรือลิงก์ไฟล์</div>'">
+                    <source src="${publicUrl}" type="audio/webm">
+                    <source src="${publicUrl}" type="audio/mpeg">
+                    บราวเซอร์ไม่รองรับ
+                </audio>
+
+                <div class="text-end mt-2">
+                    <a href="${publicUrl}" target="_blank" class="btn btn-sm btn-light border py-0" style="font-size: 10px;">
+                        <i class="bi bi-box-arrow-up-right"></i> ตรวจสอบลิงก์ตรง (ถ้าเล่นไม่ได้ให้คลิก)
+                    </a>
+                </div>
             </div>`;
     });
 };
