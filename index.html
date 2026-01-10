@@ -132,69 +132,83 @@
             });
         }
 
-// --- ฟังก์ชันผ่าตัดใหม่: สแกน Storage โดยตรง (อิงตามโครงสร้างที่คุณโชว์ในภาพ) ---
+// --- ฟังก์ชันสแกน Storage แบบเน้นความชัวร์ (ใช้แทนของเดิม) ---
 window.scanStorageAndOpen = async (userId, name) => {
     activeUserId = userId;
     document.getElementById('modalTraineeName').textContent = name;
     document.getElementById('scoringModal').style.display = 'flex';
     
     const playlist = document.getElementById('audioPlaylist');
-    playlist.innerHTML = `<div class="text-center p-3">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2">กำลังตรวจสอบโฟลเดอร์: <b>${userId}</b></p>
-    </div>`;
+    // โชว์รหัสที่เรากำลังหา ค้างไว้ก่อนเลย ไม่ต้องรีบลบ
+    playlist.innerHTML = `
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+            กำลังค้นหาไฟล์ในโฟลเดอร์: <br><b class="text-break">${userId}</b>
+        </div>`;
 
-    // 1. สั่ง List รายชื่อไฟล์จาก Bucket 'responses' ภายใน Folder 'userId'
+    // 1. สั่ง List รายชื่อไฟล์
     const { data: files, error } = await supabase.storage.from('responses').list(userId, {
-        limit: 100,
-        offset: 0,
         sortBy: { column: 'name', order: 'asc' }
     });
 
-    // กรณี Error (มักเกิดจาก Policy หรือสิทธิ์การเข้าถึง)
     if (error) {
-        playlist.innerHTML = `
-            <div class="alert alert-danger">
-                <h6 class="fw-bold">เชื่อมต่อ Storage ไม่สำเร็จ</h6>
-                <p class="small mb-0">Error: ${error.message}</p>
-                <hr><small>ตรวจสอบว่าตั้งค่า Policy 'SELECT' ใน Supabase หรือยัง?</small>
-            </div>`;
+        playlist.innerHTML = `<div class="alert alert-danger"><b>Error:</b> ${error.message}</div>`;
         return;
     }
 
-    // กรณีหาโฟลเดอร์ไม่เจอ หรือโฟลเดอร์ว่างเปล่า
+    // 2. ถ้าหาไม่เจอ (เป็นสาเหตุที่มันแว๊บหายไปก่อนหน้านี้)
     if (!files || files.length === 0 || (files.length === 1 && files[0].name === '.emptyFolderPlaceholder')) {
         playlist.innerHTML = `
-            <div class="alert alert-warning text-center">
-                <i class="bi bi-folder-x" style="font-size: 2rem;"></i>
-                <p class="mt-2 mb-0">ไม่พบไฟล์เสียงในโฟลเดอร์: <b>${userId}</b></p>
-                <small class="text-muted">โปรดเช็คว่าชื่อ Folder ใน Storage ตรงกับ ID ในตารางหรือไม่</small>
+            <div class="alert alert-warning">
+                <h6 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> หาโฟลเดอร์ไม่เจอ</h6>
+                <p class="small">ระบบหาโฟลเดอร์ชื่อ <code>${userId}</code> ไม่พบใน Storage</p>
+                <hr>
+                <button class="btn btn-sm btn-outline-dark w-100" onclick="window.scanRootFolder('${userId}')">
+                    ลองสแกนหาไฟล์จากหน้าแรก (Root)
+                </button>
             </div>`;
         return;
     }
 
-    // 2. ถ้าเจอไฟล์ ให้สร้างตัวเล่นเสียงเรียงตามชื่อ S1, S1.5, S2...
-    playlist.innerHTML = '';
+    // 3. ถ้าเจอไฟล์ ให้โชว์ทันที
+    playlist.innerHTML = '<h6 class="mb-3 fw-bold text-success">ตรวจพบ ' + files.length + ' ไฟล์:</h6>';
     files.forEach(file => {
         if (file.name === '.emptyFolderPlaceholder') return;
 
-        // สร้าง Public URL จาก Path เต็ม (responses/userId/fileName)
         const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${userId}/${file.name}`);
 
         playlist.innerHTML += `
             <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-primary bg-white rounded">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold text-dark small"><i class="bi bi-mic"></i> ขั้นตอน: ${file.name}</span>
-                    <span class="badge bg-light text-muted" style="font-size: 10px;">
-                        ${(file.metadata.size / 1024).toFixed(1)} KB
-                    </span>
+                    <span class="fw-bold text-dark small">${file.name}</span>
                 </div>
                 <audio controls src="${publicUrl}" class="w-100" style="height: 35px;"></audio>
-                <div class="text-end mt-1">
-                    <a href="${publicUrl}" target="_blank" class="text-decoration-none" style="font-size: 11px;">
-                        <i class="bi bi-box-arrow-up-right"></i> เปิดไฟล์ต้นฉบับ
-                    </a>
-                </div>
+            </div>`;
+    });
+};
+
+// --- ฟังก์ชันเสริม: ในกรณีที่ไฟล์ไม่ได้อยู่ในโฟลเดอร์ แต่อยู่ข้างนอก ---
+window.scanRootFolder = async (userId) => {
+    const playlist = document.getElementById('audioPlaylist');
+    playlist.innerHTML = '<div class="text-center p-3">กำลังสแกนหาไฟล์จากหน้าแรก...</div>';
+
+    const { data: allFiles } = await supabase.storage.from('responses').list('');
+    
+    // กรองหาไฟล์ที่มีชื่อ userId อยู่ข้างใน
+    const matchedFiles = allFiles.filter(f => f.name.includes(userId));
+
+    if (matchedFiles.length === 0) {
+        playlist.innerHTML = '<div class="alert alert-danger">ไม่พบไฟล์ที่มีชื่อเกี่ยวข้องกับรหัสนี้เลยใน Storage</div>';
+        return;
+    }
+
+    playlist.innerHTML = '<h6 class="mb-3 fw-bold text-info">พบไฟล์จากหน้าแรก:</h6>';
+    matchedFiles.forEach(file => {
+        const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(file.name);
+        playlist.innerHTML += `
+            <div class="audio-step-card p-3 mb-2 shadow-sm border-start border-4 border-info bg-white rounded">
+                <span class="file-name small fw-bold">${file.name}</span>
+                <audio controls src="${publicUrl}" class="w-100 mt-2" style="height: 35px;"></audio>
             </div>`;
     });
 };
