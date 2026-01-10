@@ -1,131 +1,213 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supabase Audio Storage Explorer</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Evaluation Dashboard (Original Base)</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 30px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        .status-box { padding: 10px; margin-bottom: 20px; border-radius: 5px; text-align: center; font-weight: bold; }
-        .loading { background: #fff3cd; color: #856404; }
-        .ready { background: #d4edda; color: #155724; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #007bff; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-        audio { height: 35px; width: 200px; }
-        .btn-refresh { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; float: right; }
-        .user-badge { background: #6c757d; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
-        .part-badge { background: #17a2b8; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; color: #34495e; }
+        #loginPage { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); }
+        .main-content { display: none; padding: 20px; }
+        .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .scoring-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
+        .audio-step-card { border-left: 4px solid #3498db; background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <button class="btn-refresh" onclick="scanStorage()">🔄 รีเฟรชข้อมูล</button>
-    <h1>📂 Audio Storage Explorer</h1>
-    
-    <div id="status" class="status-box loading">กำลังเตรียมการเชื่อมต่อ...</div>
+    <div id="loginPage">
+        <div class="card shadow p-4" style="width: 350px;">
+            <h3 class="text-center mb-4">Dashboard Login</h3>
+            <input type="password" id="adminPass" class="form-control mb-3" placeholder="รหัสผ่าน">
+            <button id="loginBtn" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
+        </div>
+    </div>
 
-    <table id="fileTable">
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Section</th>
-                <th>ชื่อไฟล์</th>
-                <th>เครื่องมือเล่นเสียง</th>
-                <th>ลิงก์</th>
-            </tr>
-        </thead>
-        <tbody id="fileList">
-            </tbody>
-    </table>
-</div>
+    <div id="mainContent" class="main-content container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold"><i class="bi bi-graph-up-arrow"></i> ผลการทดสอบ Simulator</h2>
+            <button id="logoutBtn" class="btn btn-outline-danger">ออกจากระบบ</button>
+        </div>
 
-<script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        <div class="table-container shadow-sm">
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><label class="small">วันที่เริ่มต้น</label><input type="date" id="startDate" class="form-control"></div>
+                <div class="col-md-3"><label class="small">วันที่สิ้นสุด</label><input type="date" id="endDate" class="form-control"></div>
+                <div class="col-md-2 d-flex align-items-end"><button id="filterBtn" class="btn btn-success w-100">ค้นหา</button></div>
+            </div>
 
-    // ดึงค่า Config จากโค้ดต้นฉบับ
-    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>วัน-เวลา</th>
+                            <th>พนักงาน</th>
+                            <th>กลุ่มงาน</th>
+                            <th>ประเภท</th>
+                            <th>สถานะการประเมิน</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissionTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    async function scanStorage() {
-        const statusEl = document.getElementById('status');
-        const listEl = document.getElementById('fileList');
-        
-        statusEl.className = 'status-box loading';
-        statusEl.textContent = '⏳ กำลังสแกนหาไฟล์เสียงใน Storage... (โปรดรอสักครู่)';
-        listEl.innerHTML = '';
+    <div id="scoringModal" class="scoring-modal">
+        <div class="modal-content shadow-lg">
+            <div class="d-flex justify-content-between mb-3">
+                <h4 class="fw-bold">ประเมินผล: <span id="modalTraineeName" class="text-primary"></span></h4>
+                <button class="btn-close" onclick="document.getElementById('scoringModal').style.display='none'"></button>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-5 border-end">
+                    <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-mic"></i> รายการเสียงที่บันทึกไว้</h6>
+                    <div id="audioPlaylist" style="max-height: 450px; overflow-y: auto;"></div>
+                </div>
+                <div class="col-md-7 ps-4">
+                    <h6 class="fw-bold mb-3 text-success"><i class="bi bi-pencil-square"></i> บันทึกคะแนน</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label>Step 1 (5)</label><input type="number" id="s1" class="form-control score-input"></div>
+                        <div class="col-md-4"><label>Step 2 (5)</label><input type="number" id="s2" class="form-control score-input"></div>
+                        <div class="col-md-4"><label>Step 3 (5)</label><input type="number" id="s3" class="form-control score-input"></div>
+                        <div class="col-md-4"><label>Step 4 (5)</label><input type="number" id="s4" class="form-control score-input"></div>
+                        <div class="col-md-4"><label>Step 5 (5)</label><input type="number" id="s5" class="form-control score-input"></div>
+                        <div class="col-md-12"><label>ข้อเสนอแนะ</label><textarea id="feedback" class="form-control" rows="3"></textarea></div>
+                    </div>
+                    <div class="alert alert-secondary mt-3 text-center">
+                        <h5 class="mb-0">คะแนนรวม: <span id="totalScore">0</span> / 25</h5>
+                    </div>
+                    <button id="saveScoreBtn" class="btn btn-primary w-100 mt-3 fw-bold">บันทึกผลการประเมิน</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        try {
-            // 1. ดึงโฟลเดอร์ระดับบนสุด (User IDs)
-            const { data: users, error: userError } = await supabase.storage.from('responses').list('');
-            if (userError) throw userError;
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-            let fileCount = 0;
+        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-            for (const user of users) {
-                if (user.name === '.emptyFolderPlaceholder') continue;
+        const VALID_PASS = '12345678';
+        let rawData = [];
+        let currentUserIdSession = null;
 
-                // 2. ดึงโฟลเดอร์ Section (S1, S2, S3...) ภายใน User
-                const { data: sections, error: sectionError } = await supabase.storage.from('responses').list(user.name);
-                if (sectionError) continue;
+        // Login
+        document.getElementById('loginBtn').onclick = () => {
+            if (document.getElementById('adminPass').value === VALID_PASS) {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                fetchSubmissions();
+            } else { alert('รหัสผ่านไม่ถูกต้อง'); }
+        };
 
-                for (const section of sections) {
-                    // 3. ดึงไฟล์ .webm ภายในแต่ละ Section
-                    const path = `${user.name}/${section.name}`;
-                    const { data: files, error: fileError } = await supabase.storage.from('responses').list(path);
-                    if (fileError) continue;
-
-                    for (const file of files) {
-                        if (file.name.endsWith('.webm')) {
-                            fileCount++;
-                            // สร้าง Public URL
-                            const { data: { publicUrl } } = supabase.storage.from('responses').getPublicUrl(`${path}/${file.name}`);
-                            
-                            appendRow(user.name, section.name, file.name, publicUrl);
-                        }
-                    }
-                }
-            }
-
-            statusEl.className = 'status-box ready';
-            statusEl.textContent = `✅ พบไฟล์ทั้งหมด ${fileCount} ไฟล์`;
+        // --- หัวใจสำคัญ: ดึงข้อมูลแล้วจัดกลุ่ม ---
+        async function fetchSubmissions() {
+            let query = supabase.from('submissions').select('*').order('created_at', { ascending: false });
             
-            if(fileCount === 0) {
-                listEl.innerHTML = '<tr><td colspan="5" style="text-align:center;">ไม่พบไฟล์เสียงในระบบ</td></tr>';
-            }
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (start && end) { query = query.gte('created_at', start).lte('created_at', end + 'T23:59:59'); }
 
-        } catch (err) {
-            statusEl.className = 'status-box';
-            statusEl.style.background = '#f8d7da';
-            statusEl.style.color = '#721c24';
-            statusEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+            const { data, error } = await query;
+            if(error) return;
+            rawData = data;
+
+            // จัดกลุ่มข้อมูลตาม user_id (หรือ userid) เพื่อให้ในตารางโชว์แค่ชื่อคนเดียวต่อรอบ
+            const grouped = data.reduce((acc, curr) => {
+                const key = curr.user_id || curr.userid;
+                if (!acc[key]) { acc[key] = curr; }
+                return acc;
+            }, {});
+
+            const tbody = document.getElementById('submissionTable');
+            tbody.innerHTML = '';
+
+            Object.values(grouped).forEach(item => {
+                const uid = item.user_id || item.userid;
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="small">${new Date(item.created_at).toLocaleString('th-TH')}</td>
+                        <td class="fw-bold">${item.name}</td>
+                        <td>${item.user_group || '-'}</td>
+                        <td>${item.insurance_type || '-'}</td>
+                        <td><span class="badge bg-info text-dark">${item.manual_score || 'รอประเมิน'}</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="window.openEval('${uid}', '${item.name}')">ประเมิน</button></td>
+                    </tr>`;
+            });
         }
-    }
 
-    function appendRow(userId, section, fileName, url) {
-        const listEl = document.getElementById('fileList');
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><span class="user-badge">${userId.substring(0,8)}...</span></td>
-            <td><span class="part-badge">${section}</span></td>
-            <td style="font-size: 0.85em; color: #666;">${fileName}</td>
-            <td><audio controls src="${url}"></audio></td>
-            <td><a href="${url}" target="_blank">🔗 เปิดไฟล์</a></td>
-        `;
-        listEl.appendChild(row);
-    }
+        // --- เปิด Modal และดึงเสียงทุก Step ย้อนหลัง ---
+        window.openEval = (userId, name) => {
+            currentUserIdSession = userId;
+            document.getElementById('modalTraineeName').textContent = name;
+            document.getElementById('scoringModal').style.display = 'flex';
+            
+            // กรองข้อมูลเฉพาะของคนนี้มาเรียง Step 1-5
+            const steps = rawData.filter(d => (d.user_id === userId || d.userid === userId))
+                                .sort((a, b) => a.part_number - b.part_number);
+            
+            const playlist = document.getElementById('audioPlaylist');
+            playlist.innerHTML = '';
+            
+            steps.forEach(s => {
+                if(!s.audio_url) return;
+                playlist.innerHTML += `
+                    <div class="audio-step-card">
+                        <div class="small fw-bold">Step ${s.part_number}: ${s.question_text || 'ไฟล์เสียง'}</div>
+                        <audio controls src="${s.audio_url}" class="w-100 mt-1" style="height: 30px;"></audio>
+                    </div>`;
+            });
 
-    // รันครั้งแรกเมื่อโหลดหน้าจอ
-    window.scanStorage = scanStorage;
-    window.onload = scanStorage;
+            // ดึงคะแนนเดิม (ถ้ามี)
+            const summary = steps.find(s => s.manual_score !== null) || steps[0];
+            document.getElementById('s1').value = summary.s1_score || '';
+            document.getElementById('s2').value = summary.s2_score || '';
+            document.getElementById('s3').value = summary.s3_score || '';
+            document.getElementById('s4').value = summary.s4_score || '';
+            document.getElementById('s5').value = summary.s5_score || '';
+            document.getElementById('feedback').value = summary.feedback || '';
+            calculateTotal();
+        };
 
-</script>
+        const calculateTotal = () => {
+            const sum = ['s1','s2','s3','s4','s5'].reduce((acc, id) => acc + (parseInt(document.getElementById(id).value) || 0), 0);
+            document.getElementById('totalScore').textContent = sum;
+        };
+        document.querySelectorAll('.score-input').forEach(i => i.oninput = calculateTotal);
 
+        document.getElementById('saveScoreBtn').onclick = async () => {
+            const total = document.getElementById('totalScore').textContent;
+            const feedback = document.getElementById('feedback').value;
+            
+            // อัปเดตข้อมูลลงทุกแถวที่อยู่ใน Session เดียวกัน
+            const { error } = await supabase.from('submissions')
+                .update({ 
+                    manual_score: total, 
+                    feedback: feedback,
+                    s1_score: document.getElementById('s1').value,
+                    s2_score: document.getElementById('s2').value,
+                    s3_score: document.getElementById('s3').value,
+                    s4_score: document.getElementById('s4').value,
+                    s5_score: document.getElementById('s5').value
+                })
+                .match({ user_id: currentUserIdSession });
+
+            if(!error) { alert("บันทึกคะแนนสำเร็จ"); fetchSubmissions(); document.getElementById('scoringModal').style.display='none'; }
+        };
+
+        document.getElementById('filterBtn').onclick = fetchSubmissions;
+        document.getElementById('logoutBtn').onclick = () => location.reload();
+    </script>
 </body>
 </html>
