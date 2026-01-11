@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>E-Simulator Roleplay (Final Fixed)</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
+        body { 
+            font-family: 'Sarabun', sans-serif;
+            padding: 20px; 
+            text-align: center; 
+            background-color: #f4f7f6;
+            -webkit-text-size-adjust: 100%;
+        }
+        .container-box {
+            max-width: 700px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+        h1 { font-size: 28px; color: #d9534f; margin-bottom: 20px; }
+        h2 { margin-top: 25px; font-size: 22px; color: #337ab7; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            font-family: 'Sarabun', sans-serif;
+            font-weight: bold;
+        }
+        button:hover { background-color: #4cae4c; transform: translateY(-2px); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-stop { background-color: #d9534f; }
+        .btn-stop:hover { background-color: #c9302c; }
+        .btn-next { background-color: #f0ad4e; }
+        
+        .setup-section, .test-section { margin-bottom: 30px; text-align: left; }
+        .instruction { font-size: 16px; color: #666; margin-bottom: 15px; line-height: 1.6; }
+        .status-recording { color: #d9534f; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity:1;} 50% {opacity:0.4;} 100% {opacity:1;} }
+        
+        input[type="text"], select {
+            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box;
+        }
+        .radio-group { display: flex; gap: 20px; margin: 10px 0; }
+        
+        #certificate {
+            display: none; margin-top: 30px; padding: 40px; border: 10px double #d9534f; background: #fff; position: relative;
+        }
+        #certificate h2 { border: none; color: #d9534f; font-size: 32px; }
+        
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #d9534f;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingText" style="margin-top:15px; font-weight:bold;">กำลังบันทึกข้อมูล...</p>
+    </div>
+
+    <div class="container-box">
+        <h1>🎙️ Sales E-Simulator</h1>
+        
+        <div id="setup" class="setup-section">
+            <label>ชื่อ-นามสกุล:</label>
+            <input type="text" id="inputUserName" placeholder="กรอกชื่อของคุณ">
+            <label>สังกัด/กลุ่มงาน:</label>
+            <input type="text" id="inputUserGroup" placeholder="กรอกชื่อกลุ่มงาน">
+            
+            <label>ระดับความยาก:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="difficulty" value="easy" checked> ระดับปกติ (Easy)</label>
+                <label><input type="radio" name="difficulty" value="hard"> ระดับท้าทาย (Hard)</label>
+            </div>
+            
+            <label>เลือกประเภทประกัน:</label>
+            <select id="productType">
+                <option value="CI">CI Super Care</option>
+                <option value="Life">Life Care 20/99</option>
+            </select>
+            <button id="startTestBtn" style="width:100%; margin:20px 0;">เริ่มการทดสอบ</button>
+        </div>
+
+        <div id="section1" class="test-section" style="display:none;">
+            <h2>Step 1: การเปิดใจและสร้างบรรยากาศ</h2>
+            <p class="instruction" id="s1_instruction"></p>
+            <audio id="customerAudio" style="width:100%; margin-bottom:10px;"></audio>
+            <div id="s1_status"></div>
+            <button id="recordBtn">🎤 กดเพื่อพูดตอบโต้</button>
+            <button id="nextRoundBtn" class="btn-next" style="display:none;">ถัดไป</button>
+            <button id="nextSection2Btn" class="btn-next" style="display:none;">ไปขั้นตอนถัดไป</button>
+        </div>
+
+        <div id="section2" class="test-section" style="display:none;">
+            <h2>Step 2: การนำเสนอผลิตภัณฑ์ (Pitching)</h2>
+            <p class="instruction">โปรดนำเสนอจุดเด่นของแบบประกันที่คุณเลือกมาให้ครบถ้วน</p>
+            <div id="s2_status"></div>
+            <button id="pitchRecordBtn">🎤 เริ่มบันทึกการนำเสนอ</button>
+            <button id="nextSection3Btn" class="btn-next" style="display:none;">ไปขั้นตอนถัดไป</button>
+        </div>
+
+        <div id="section3" class="test-section" style="display:none;">
+            <h2>Step 3: การตอบข้อโต้แย้ง</h2>
+            <p class="instruction">ลูกค้ากำลังสงสัย... ฟังเสียงลูกค้าแล้วกดตอบครับ</p>
+            <button id="startQBtn">🔈 ฟังเสียงลูกค้า</button>
+            <div id="s3_status" style="margin-top:10px;"></div>
+            <button id="answerBtn" style="display:none;">🎤 ตอบข้อโต้แย้ง</button>
+            <button id="closeBtn" style="display:none;">🎤 ปิดการขายทันที</button>
+            <button id="replyBtn" style="display:none;">🎤 ตอบคำถามเพิ่มเติม</button>
+            <button id="nextSection4Btn" class="btn-next" style="display:none;">ไปขั้นตอนถัดไป</button>
+        </div>
+
+        <div id="section4" class="test-section" style="display:none;">
+            <h2>Step 4: ข้อโต้แย้งระดับสูง</h2>
+            <p class="instruction">ลูกค้ายังลังเลเรื่องเบี้ยประกัน...</p>
+            <div id="s4_status"></div>
+            <button id="answerHBtn">🎤 ตอบข้อโต้แย้งเบี้ยประกัน</button>
+            <button id="nextSection5Btn" class="btn-next" style="display:none;">ไปขั้นตอนสุดท้าย</button>
+        </div>
+
+        <div id="section5" class="test-section" style="display:none;">
+            <h2>Step 5: การสรุปและปิดการขาย</h2>
+            <p class="instruction">สรุปความคุ้มครองและขออนุญาตทำแอปครับ</p>
+            <div id="s5_status"></div>
+            <button id="answerABtn">🎤 สรุปและปิดการขาย</button>
+            <button id="finalSaveBtn" class="btn-next" style="display:none; background-color: #28a745;">✅ ส่งผลการทดสอบ</button>
+        </div>
+
+        <div id="certificate">
+            <h2>ยินดีด้วย!</h2>
+            <p style="font-size: 20px;">คุณ <strong><span id="traineeName"></span></strong></p>
+            <p>ได้ทำการทดสอบ Sales E-Simulator เสร็จสิ้น</p>
+            <p>วันที่ทดสอบ: <span id="issueDate"></span></p>
+            <button id="certBtn" style="background:#d9534f;">ดูใบประกาศ</button>
+        </div>
+    </div>
+
+<script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { v4 as uuidv4 } from 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/esm-browser/index.js';
+
+    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // --- 1. คลังข้อมูลเสียงลูกค้า (แก้ไข URL ไฟล์เสียงที่นี่) ---
+    const scenarios = {
+        s1: [
+            { text: "โทรมาจากไหนครับ? / ไม่สนใจครับ มีประกันเยอะแล้ว", audio: "audio/s1_1.mp3" },
+            { text: "ตอนนี้ไม่สะดวกคุย ส่งเอกสารมาให้ดูก่อนได้ไหม?", audio: "audio/s1_2.mp3" },
+            { text: "เอาข้อมูลมาจากไหนครับ? / ไม่ขออนุญาตบันทึกเสียงได้ไหม?", audio: "audio/s1_3.mp3" }
+        ],
+        s2: [
+            { text: "ประกันตัวนี้คุ้มครองกี่ปี? จ่ายเบี้ยกี่ปี? ผ่าตัดใหญ่/อุบัติเหตุ/OPD ได้ไหม?", audio: "audio/s2_1.mp3" }
+        ],
+        s3: [
+            { text: "ถ้าเป็นเบาหวาน ความดัน หรือโรคร้ายแรงอยู่แล้ว จะทำได้ไหม?", audio: "audio/s3_1.mp3" }
+        ],
+        s4: [
+            { text: "เบี้ยเท่าไหร่? มีเงินคืนระหว่างทางไหม? ถ้ายกเลิกกลางคันจะเป็นยังไง?", audio: "audio/s4_1.mp3" }
+        ],
+        s5: [
+            { text: "ขอคิดดูก่อน / ปรึกษาแฟนก่อน / เบี้ยแพงไปหน่อย และส่งยาวเกินไป", audio: "audio/s5_1.mp3" }
+        ]
+    };
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let allRecordings = [];
+    let currentUserId = uuidv4();
+    let selectedProductType = "";
+    let s1_round = 0;
+    const customerAudioPlayer = new Audio();
+
+    // ฟังก์ชันช่วยเล่นเสียง
+    const playScenarioAudio = (audioUrl, statusId) => {
+        const statusElem = document.getElementById(statusId);
+        statusElem.innerHTML = "🔈 กำลังเล่นเสียงลูกค้า...";
+        customerAudioPlayer.src = audioUrl;
+        customerAudioPlayer.play();
+        customerAudioPlayer.onended = () => {
+            statusElem.innerHTML = "✅ ฟังจบแล้ว ตอบคำถามได้เลย";
+        };
+    };
+
+    // --- Section 1: การเปิดใจ (Loop ตามจำนวนข้อ) ---
+    const startTest = () => {
+        const name = document.getElementById("inputUserName").value;
+        if(!name) return alert("กรุณากรอกชื่อก่อนเริ่ม");
+        selectedProductType = document.getElementById("productType").value;
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("section1").style.display = "block";
+        loadS1Round();
+    };
+
+    const loadS1Round = () => {
+        if(s1_round < scenarios.s1.length) {
+            const currentQ = scenarios.s1[s1_round];
+            document.getElementById("s1_instruction").textContent = `สถานการณ์ที่ ${s1_round + 1}: ${currentQ.text}`;
+            document.getElementById("nextRoundBtn").style.display = "none";
+            document.getElementById("recordBtn").style.display = "none"; // ซ่อนปุ่มพูดจนกว่าจะกดฟัง
+            
+            // สร้างปุ่มฟังเสียงถ้ายังไม่มี หรือใช้ปุ่มเดิม
+            let playBtn = document.getElementById("playS1Btn");
+            if(!playBtn) {
+                playBtn = document.createElement("button");
+                playBtn.id = "playS1Btn";
+                playBtn.textContent = "🔈 ฟังเสียงลูกค้า";
+                playBtn.onclick = () => {
+                    playScenarioAudio(currentQ.audio, "s1_status");
+                    document.getElementById("recordBtn").style.display = "inline-block";
+                };
+                document.getElementById("section1").insertBefore(playBtn, document.getElementById("s1_status"));
+            }
+        } else {
+            document.getElementById("section1").innerHTML = "<h2>จบขั้นตอนที่ 1</h2><button class='btn-next' onclick='document.getElementById(\"section1\").style.display=\"none\"; document.getElementById(\"section2\").style.display=\"block\";'>ไปขั้นตอนที่ 2</button>";
+        }
+    };
+
+    // --- ฟังก์ชันบันทึกเสียง (ใช้ร่วมกันทุก Section) ---
+    const toggleRecording = async (step, sectionKey, roundIdx) => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            return;
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            
+            // ดึงข้อความคำถามมาเก็บไว้
+            let qText = scenarios[sectionKey][roundIdx].text;
+            let partNum = parseInt(step);
+
+            allRecordings.push({ 
+                part: partNum, 
+                qNum: roundIdx + 1, 
+                qText: qText, 
+                audioBlob: blob 
+            });
+
+            updateUIStatus(step, false);
+            showNextButton(step);
+        };
+        mediaRecorder.start();
+        updateUIStatus(step, true);
+    };
+
+    const updateUIStatus = (step, isRecording) => {
+        const statusMap = {1:"s1_status", 8:"s2_status", 2:"s3_status", 5:"s4_status", 6:"s5_status"};
+        const statusId = statusMap[step];
+        document.getElementById(statusId).innerHTML = isRecording ? 
+            '<p class="status-recording">🔴 กำลังบันทึกเสียงตอบของคุณ...</p>' : 
+            '<p style="color:green;">✅ บันทึกคำตอบสำเร็จ</p>';
+    };
+
+    const showNextButton = (step) => {
+        if(step === 1) { 
+            s1_round++; 
+            document.getElementById("nextRoundBtn").style.display = "inline-block"; 
+            document.getElementById("recordBtn").style.display = "none";
+        }
+        else if(step === 8) document.getElementById("nextSection3Btn").style.display = "inline-block";
+        else if(step === 2) document.getElementById("nextSection4Btn").style.display = "inline-block";
+        else if(step === 5) document.getElementById("nextSection5Btn").style.display = "inline-block";
+        else if(step === 6) document.getElementById("finalSaveBtn").style.display = "inline-block";
+    };
+
+    // --- ผูกเหตุการณ์กับปุ่มในหน้าจอ ---
+
+    // Section 1
+    document.getElementById("startTestBtn").onclick = startTest;
+    document.getElementById("recordBtn").onclick = () => toggleRecording(1, 's1', s1_round);
+    document.getElementById("nextRoundBtn").onclick = loadS1Round;
+
+    // Section 2: Pitching
+    document.getElementById("pitchRecordBtn").parentElement.querySelector('p').textContent = scenarios.s2[0].text;
+    document.getElementById("pitchRecordBtn").onclick = () => toggleRecording(8, 's2', 0);
+
+    // Section 3: Health (ปรับปุ่มเดิมของคุณ)
+    document.getElementById("startQBtn").onclick = () => {
+        playScenarioAudio(scenarios.s3[0].audio, "s3_status");
+        document.getElementById("answerBtn").style.display = "inline-block";
+    };
+    document.getElementById("answerBtn").onclick = () => toggleRecording(2, 's3', 0);
+
+    // Section 4: Premium
+    document.getElementById("answerHBtn").onclick = () => {
+        // เพิ่มปุ่มฟังเสียงก่อนหน้าปุ่มนี้ใน HTML ด้วยจะดีมากครับ
+        toggleRecording(5, 's4', 0);
+    };
+
+    // Section 5: Closing
+    document.getElementById("answerABtn").onclick = () => toggleRecording(6, 's5', 0);
+
+    // Final Save
+    document.getElementById("finalSaveBtn").onclick = async () => {
+        // ... (ใช้ logic uploadAll เดิมของคุณได้เลยครับ ข้อมูลจะถูกดึงจาก allRecordings ที่เราเตรียมไว้แล้ว)
+    };
+
+</script>
+</body>
+</html>
